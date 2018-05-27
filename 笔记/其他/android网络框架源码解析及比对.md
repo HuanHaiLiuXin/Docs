@@ -446,5 +446,101 @@
     X.list(ImmutableMap.of("group", "coworker"))
         URL:/search?roup=coworker
     ```
-4. 
-
+    - @Path:URL中"?"前面部分,Path注解用于替换url路径中的参数
+    ```
+    实例:
+    @GET("users/{user}/repos")
+    Call<ResponseBody>  getBlog（@Path("user") String user ）;
+    X.getBlog("bb")     URL:users/bb/repos
+    ```
+    - @Url:作用于方法参数,直接设置请求的接口地址
+        - 当@GET,@POST等注解里面没有url地址时,必须在方法中使用@Url，将地址以第1个参数的形式传入
+        - @Url注解的地址,不要以/开头
+        - @Url支持的类型有 okhttp3.HttpUrl, String, java.net.URI, android.net.Uri
+        - @Path注解与@Url注解不能同时使用,否则会抛异常
+            ```
+            Path注解用于替换url路径中的参数,这就要求在使用path注解时,
+            必须已经存在请求路径,不然没法替换路径中指定的参数啊,
+            而Url注解是在参数中指定的请求路径的,这个时候指定请求路径已经晚了,
+            path注解找不到请求路径,更别提更换请求路径中的参数了
+            ```
+    ```
+    public interface BlogService {
+        /**
+         * 当GET、POST...HTTP等方法中没有设置Url时，则必须使用 {@link Url}提供
+         * 对于Query和QueryMap，如果不是String（或Map的第二个泛型参数不是String）时
+         * 会被默认会调用toString转换成String类型
+         * Url支持的类型有 okhttp3.HttpUrl, String, java.net.URI, android.net.Uri
+         * {@link retrofit2.http.QueryMap} 用法和{@link retrofit2.http.FieldMap} 用法一样，不再说明
+         */
+        @GET //当有URL注解时，这里的URL就省略了
+        Call<ResponseBody> testUrlAndQuery(@Url String url,@Query("showAll") boolean showAll);
+    }
+    Retrofit retrofit = new Retrofit.Builder()
+        .baseUrl("http://localhost:4567/")
+        .build();
+    BlogService service = retrofit.create(BlogService.class);
+    Call<ResponseBody> call1 = service.testUrlAndQuery("headers",false);
+    //http://localhost:4567/headers?showAll=false
+    ```
+![](https://user-gold-cdn.xitu.io/2018/5/27/163a1f24584c5f47?w=1158&h=667&f=png&s=36735)
+### Retrofit使用流程
+- 步骤1：添加Retrofit库的依赖
+    - Retrofit支持多种数据解析方式,使用时需要在build.gradle添加依赖
+        ```
+        build.gradle添加依赖:
+        compile 'com.squareup.retrofit2:retrofit:2.0.2'
+        
+        Gson	    com.squareup.retrofit2:converter-gson:2.0.2
+        Jackson	    com.squareup.retrofit2:converter-jackson:2.0.2
+        Simple XML  com.squareup.retrofit2:converter-simplexml:2.0.2
+        Protobuf    com.squareup.retrofit2:converter-protobuf:2.0.2
+        Moshi	    com.squareup.retrofit2:converter-moshi:2.0.2
+        Wire	    com.squareup.retrofit2:converter-wire:2.0.2
+        Scalars	    com.squareup.retrofit2:converter-scalars:2.0.2
+        ```
+    - Retrofit支持多种网络请求适配器方式：guava、Java8和rxjava
+        ```
+        build.gradle添加依赖:
+        guava	    com.squareup.retrofit2:adapter-guava:2.0.2
+        Java8	    com.squareup.retrofit2:adapter-java8:2.0.2
+        rxjava	    com.squareup.retrofit2:adapter-rxjava:2.0.2
+        ```
+- 步骤2：创建 接收服务器返回数据 的类
+- 步骤3：创建 用于描述网络请求 的接口
+- 步骤4：创建 Retrofit 实例
+    ```
+    Retrofit retrofit = new Retrofit.Builder()
+        .baseUrl("http://fanyi.youdao.com/") // 设置网络请求的Url地址
+        .addConverterFactory(GsonConverterFactory.create())//设置数据解析器
+        .addCallAdapterFactory(RxJavaCallAdapterFactory.create())//支持RxJava平台
+        .build();
+    ```
+- 步骤5：创建 网络请求接口实例 并 配置网络请求参数
+    ```
+    // 创建 网络请求接口 的实例
+    GetRequest_Interface request = retrofit.create(GetRequest_Interface.class);
+    //对 发送请求 进行封装
+    Call<Reception> call = request.getCall();
+    ```
+- 步骤6：发送网络请求(异步 / 同步)
+    ```
+    //发送网络请求(异步)
+    call.enqueue(new Callback<Translation>() {
+        //请求成功时回调
+        @Override
+        public void onResponse(Call<Translation> call,Response<Translation> response) {
+            // 对返回数据进行处理
+            response.body().show();
+        }
+        //请求失败时候的回调
+        @Override
+        public void onFailure(Call<Translation> call, Throwable throwable) {
+            System.out.println("连接失败");
+        }
+    });
+    // 发送网络请求（同步）
+    Response<Reception> response = call.execute();
+    // 对返回数据进行处理
+    response.body().show();
+    ```
