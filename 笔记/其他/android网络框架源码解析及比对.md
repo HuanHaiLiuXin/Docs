@@ -544,3 +544,187 @@
     // 对返回数据进行处理
     response.body().show();
     ```
+## Retrofit源码分析
+### Retrofit涉及到的设计模式
+1. 模板模式
+    - 定义:定义一个操作的算法框架,将一些步骤延迟到子类中,使子类不改变算法的结构即可重新定义该算法的某些特定步骤
+    - 使用场景:多个子类有公有方法，且子类公有方法的调度逻辑基本相同
+    - 模板模式包含2个角色:
+      - 父类:抽象类 public abstract  class AbsParent
+        - 父类中包含:基本方法 + 模板方法 + 钩子方法
+        - 基本方法:父类提取公共代码:protected abstract 方法,由子类具体实现
+        - 模板方法:可以有1个或几个,完成对基本方法的调度,实现具体逻辑:public final方法,防止子类复写
+        - 钩子方法:protected方法,注意不是抽象方法.在父类的模板方法中调用,对模板方法的执行进行约束
+      - 子类:父类的实现类 public class Child1 extends AbsParent
+        - 子类中包含:基本方法的具体实现 + 钩子方法的重写
+    - 代码实例
+      ```
+       //父类
+		public abstract class AbsParent{
+		  //钩子方法
+		  protected boolean executeStep1(){
+		    return false;
+		  }
+		  //基本方法
+		  protected abstract void step1();
+		  protected abstract void step2();
+		  protected abstract void step3();
+		  //模板方法
+		  public final void execute(){
+		    if(this.executeStep1()){
+		      this.step1();
+		    }
+		    this.step2();
+		    this.step3();
+		  }
+		}
+        //子类
+        public class Child1 extends AbsParent{
+          //子类钩子方法返回值
+          private boolean executeFlag = true;
+          //子类中可以对钩子方法返回值进行设置,从而对父类的模板方法进行约束
+          public void setExecuteFlag(boolean flag){
+            this.executeFlag = flag;
+          }
+          @Override
+          protected boolean executeStep1(){
+            return this.executeFlag;
+          }
+          @Override
+          protected void step1(){
+            System.out.println("Child1:step1")
+          }
+          @Override
+          protected void step2(){
+            System.out.println("Child1:step2")
+          }
+          @Override
+          protected void step3(){
+            System.out.println("Child1:step3")
+          }
+        }
+      ```
+2. Builder模式/建造者模式
+    - 定义:将一个复杂对象的构建和它的表示分离,使得同样的构建过程可以创建不同的表示
+    - 作用:用户不需要知道复杂对象的建造过程细节,只需要指定对象的具体类型,即可创建复杂对象;具体建造者根据用户指定的对象具体类型A,按照指定顺序创建A的实例;
+    - 建造者模式包含4个角色:
+      - 产品类
+        - 产品类实现了模板模式.抽象产品父类包含基本方法和模板方法,具体产品子类实现了基本方法.
+      - 抽象建造者
+        - public abstract class:规范了产品的组建,全是抽象方法,是具体建造者的父类
+      - 具体建造者
+        - 实现抽象建造者所有方法,并返回一个建造好的具体产品子类实例
+      - 导演类
+        - 持有多个具体建造者,包含多个方法,用来生产多个具体产品类实例;
+    - 代码实例
+		```
+		抽象产品父类:包含基本方法和模板方法
+		public abstract class AbsProduct{
+		  //这个参数定义了各基本方法的执行顺序
+		  private ArrayList<String> sequence = new ArrayList<String>();
+		  //基本方法
+		  protected abstract void step1();
+		  protected abstract void step2();
+		  //设置参数
+		  public final void setSequence(ArrayList<String> sequence){
+		    this.sequence = sequence;
+		  }
+		  //模板方法
+		  public final void do(){
+		    for(String item:sequence){
+		      if(item.equalsIgnoreCase("step1")){
+		        this.step1();
+		      }else if(item.equalsIgnoreCase("step2")){
+		        this.step2();
+		      }
+		    }
+		  }
+		}
+		具体产品子类:实现了基本方法
+		public class Product1 extends AbsProduct{
+		  @Override
+		  protected void step1(){
+		    System.out.println("Product1:step1");
+		  }
+		  @Override
+		  protected void step2(){
+		    System.out.println("Product1:step2");
+		  }
+		}
+		public class Product2 extends AbsProduct{
+		  @Override
+		  protected void step1(){
+		    System.out.println("Product2:step1");
+		  }
+		  @Override
+		  protected void step2(){
+		    System.out.println("Product2:step2");
+		  }
+		}
+		抽象建造者:规范产品的组建
+		public abstract class ProductBuilder{
+		  //设置产品参数
+		  public abstract void setSequence(ArrayList<String> sequence);
+		  //获取产品实例
+		  public abstract AbsProduct getProduct();
+		}
+		具体建造者:实现抽象建造者所有方法,并返回一个建造好的具体产品子类实例
+		public class Product1Builder extends ProductBuilder{
+		  //私有变量就是将要产生的具体产品类实例
+		  private Product1 p = new Product1();
+		  @Override
+		  public void setSequence(ArrayList<String> sequence){
+		    this.p.setSequence(sequence);
+		  }
+		  @Override
+		  public AbsProduct getProduct(){
+		    return this.p;
+		  }
+		}
+		public class Product2Builder extends ProductBuilder{
+		  //私有变量就是将要产生的具体产品类实例
+		  private Product2 p = new Product2();
+		  @Override
+		  public void setSequence(ArrayList<String> sequence){
+		    this.p.setSequence(sequence);
+		  }
+		  @Override
+		  public AbsProduct getProduct(){
+		    return this.p;
+		  }
+		}
+		导演类:持有多个具体建造者,包含多个方法,用来生产多个具体产品类实例
+		public class Director{
+		  //影响产品流程顺序的参数
+		  private ArrayList<String> sequence = new ArrayList<String>();
+		  //具体建造者
+		  private Product1Builder builder1 = new Product1Builder();
+		  private Product2Builder builder2 = new Product2Builder();
+		  //根据需求可自行扩展
+		  //1:生产不同类型的具体产品
+		    //(gainProduct1A,gainProduct1B) 和 gainProduct2 就是生产不同类型的具体产品
+		  //2:相同类型的产品,其产品流程的数量及顺序也可以任意变化:
+		    //gainProduct1A和gainProduct1B 就是同类产品的流程数量及顺序变化
+		  public Product1 gainProduct1A(){
+		    this.sequence.clear();
+		    this.sequence.add("step1");
+		    this.sequence.add("step2");
+		    this.builder1.setSequence(this.sequence);
+		    return (Product1)this.builder1.getProduct();
+		  }
+		  public Product1 gainProduct1B(){
+		    this.sequence.clear();
+		    this.sequence.add("step2");
+		    this.builder1.setSequence(this.sequence);
+		    return (Product1)this.builder1.getProduct();
+		  }
+		  public Product2 gainProduct2(){
+		    this.sequence.clear();
+		    this.sequence.add("step1");
+		    this.sequence.add("step2");
+		    this.builder2.setSequence(this.sequence);
+		    return (Product2)this.builder2.getProduct();
+		  }
+		}
+		```
+3. Retrofit实例是使用建造者模式通过Builder类进行创建的
