@@ -727,4 +727,103 @@
 		  }
 		}
 		```
-3. Retrofit实例是使用建造者模式通过Builder类进行创建的
+3. 外观模式/门面模式
+    - 定义:在复杂系统S和客户端C之间再加一层"接待员"R,在R中实现对S复杂功能的访问封装;C直接和R交互即可.
+    - 作用:隐藏了S的复杂性;R对S中复杂功能进行了封装,C调用R封装过的方法,可避免低水平错误
+    - 场景:去医院看病，要 挂号,问诊,缴费,取药,让患者或患者家属觉得很复杂，如果有提供接待人员，只让接待人员来处理，就很方便
+    - 外观模式包含:接口+实现类+外观类(R)
+    - 代码实例
+		```
+		//创建1个接口,代表医院每个流程
+		public interface Step{
+		  void execute();
+		}
+		//创建实现类,代表不同类型的具体流程
+		public class GuaHao implements Step{
+		  @Override
+		  public void execute(){
+		    System.out.println("老子正在挂号");
+		  }
+		}
+		public class WenZhen implements Step{
+		  @Override
+		  public void execute(){
+		    System.out.println("老子正在问诊");
+		  }
+		}
+		public class JiaoFei implements Step{
+		  @Override
+		  public void execute(){
+		    System.out.println("老子正在缴费");
+		  }
+		}
+		public class QuYao implements Step{
+		  @Override
+		  public void execute(){
+		    System.out.println("老子正在取药");
+		  }
+		}
+		//创建外观类"接待员R"
+		public class Reception{
+		  //"接待员"持有S中复杂功能的引用
+		  private Step guahao;
+		  private Step wenzhen;
+		  private Step jiaofei;
+		  private Step quyao;
+		  public Reception(){
+		    this.guahao = new GuaHao();
+		    this.wenzhen = new WenZhen();
+		    this.jiaofei = new JiaoFei();
+		    this.quyao = new QuYao();
+		  }
+		  //定义一个供客户端调用的方法,完整实现一串流程
+		  public void executeAll(){
+		    this.guahao.execute();
+		    this.wenzhen.execute();
+		    this.jiaofei.execute();
+		    this.quyao.execute();
+		  }
+		}
+		//客户端直接调用Reception
+		Reception r = new Reception();
+		r.executeAll();
+		```
+3. 代理模式
+    - 定义:通过访问代理类的方式来间接访问目标类
+    - 优点:隐藏目标类实现细节;不改变目标类情况下,对指定操作前后执行扩展,比如进行校验和其他操作
+    - 分类:
+      - 静态代理:代理类在程序运行前已经存在
+      - 动态代理:代理类在程序运行前不存在、运行时由程序动态生成的代理方式称为动态代理
+    - 静态代理包含:
+      - 目标类和代理类共同实现的接口
+      - 目标类,代理类(代理类中持有目标类实例)
+    - 静态代理实例:
+		```
+		//创建一个接口
+		public interface MyOpt{
+		  void opt();
+		}
+		//创建目标类
+		public class TargetOpt implements MyOpt{
+		  @Override
+		  public void opt(){
+		    System.out.println("TargetOpt:opt");
+		  }
+		}
+		//创建代理类
+		public class ProxyOpt implements MyOpt{
+		  //代理类中持有 目标类实例
+		  private TargetOpt target;
+		  public ProxyOpt(){
+		    this.target = new TargetOpt();
+		  }
+		  @Override
+		  public void opt(){
+		    this.target.opt();
+		  }
+		}
+		//客户端和代理类直接进行交互:
+		ProxyOpt proxy= new ProxyOpt();
+		proxy.opt();
+		```
+    - 动态代理
