@@ -1192,3 +1192,6 @@
 			  
 			}
 			```
+	    - 动态代理生成的Class图示:
+**图片来自于[公共技术点之 Java 动态代理](http://a.codekk.com/detail/Android/Caij/%E5%85%AC%E5%85%B1%E6%8A%80%E6%9C%AF%E7%82%B9%E4%B9%8B%20Java%20%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86)**
+![动态代理生成的Class结构.png](https://upload-images.jianshu.io/upload_images/3501388-3414720cf1e06c5d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
