@@ -827,3 +827,199 @@
 		proxy.opt();
 		```
     - 动态代理
+    	- 动态代理对象P执行方法调用顺序:
+	      - P.func==>InvocationHandler.invoke==>目标类实例.func
+	    - 动态代理实现需要3步:
+	      - 1 创建目标类接口 及 目标类
+	      - 2 实现InvocationHandler接口
+	        - 调用代理对象的每个函数实际最终都是调用了InvocationHandler的invoke函数
+	      - 3 通过Proxy类新建代理类对象:Proxy.newProxyInstance(ClassLoader loader,Class<?>[] interfaces,InvocationHandler h)
+	    - 动态代理实例:
+			```
+			//创建接口
+			public interface Step{
+			  void execute();
+			}
+			//创建目标类
+			public class MyStep implements Step{
+			  @Override
+			  public void execute(){
+			    System.out.println("MyStep:execute");
+			  }
+			}
+			//实现InvocationHandler接口
+			public StepHandler implements InvocationHandler{
+			  //target:目标类实例
+			  private Object target;
+			  public StepHandler(){}
+			  public StepHandler(Object obj){
+			    this.target = obj;
+			  }
+			  //proxy:通过 Proxy.newProxyInstance() 生成的代理对象
+			  //method:表示proxy被调用的方法
+			  //args:表示proxy被调用的方法的参数
+			  @Override
+			  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+			    Object obj = method.invoke(this.target, args);
+			    return obj;
+			  }
+			}
+
+			//通过Proxy类新建代理对象,直接调用代理对象的方法
+			//1:创建InvocationHandler的实现类实例,将目标类实例作为构造参数传入
+			StepHandler h = new StepHandler(new MyStep());
+			//2:创建代理对象
+			Proxy: Object newProxyInstance(ClassLoader loader,Class<?>[] interfaces,InvocationHandler h)
+			    loader:目标类继承的接口所属的类加载器
+			    interfaces:目标类继承的接口的Class
+			    h:InvocationHandler的实现类实例
+			Step step = (Step)(Proxy.newProxyInstance(Step.class.getClassLoader(),new Class[]{Step.class},h));
+			//3:直接调用代理对象的方法
+			step.execute();    ==> "MyStep:execute"
+
+	      step.execute()实质是调用了生成的代理对象P中的execute方法
+	      ==>
+	      而P中的execute方法,是调用了刚刚创建的h.invoke方法
+	      ==>
+	      h.invoke,则调用了目标类MyStep实例中的execute方法
+			```
+	    - **Proxy.newProxyInstance(ClassLoader loader,Class<?>[] interfaces,InvocationHandler h)**源码分析
+```
+仅贴出关键代码
+
+Proxy:
+package java.lang.reflect
+public class Proxy implements java.io.Serializable {
+  private static final WeakCache<ClassLoader, Class<?>[], Class<?>>
+        proxyClassCache = new WeakCache<>(new KeyFactory(), new ProxyClassFactory());
+  private static final Class<?>[] constructorParams = { InvocationHandler.class };
+  protected InvocationHandler h;
+  protected Proxy(InvocationHandler h) {
+    Objects.requireNonNull(h);
+    this.h = h;
+  }
+  @CallerSensitive
+  public static Object newProxyInstance(
+    ClassLoader loader,
+    Class<?>[] interfaces,
+    InvocationHandler h                             )
+        throws IllegalArgumentException
+  {
+    //获取目标类继承的接口的Class副本
+    final Class<?>[] intfs = interfaces.clone();
+    //1:通过接口的Class副本,获取代理类的Class
+    Class<?> cl = getProxyClass0(loader, intfs);
+    ****
+  }
+  //1:如果代理类已经存在则返回副本;不存在则通过ProxyClassFactory创建并返回:见1.1
+  private static Class<?> getProxyClass0(ClassLoader loader,
+                                           Class<?>... interfaces) {
+        // If the proxy class defined by the given loader implementing
+        // the given interfaces exists, this will simply return the cached copy;
+        // otherwise, it will create the proxy class via the ProxyClassFactory
+    return proxyClassCache.get(loader, interfaces);
+  }
+  //1.1:此处直接看ProxyClassFactory的apply方法即可
+  proxyClassCache = new WeakCache<>(new KeyFactory(), new ProxyClassFactory());
+  private static final class ProxyClassFactory implements BiFunction<ClassLoader, Class<?>[], Class<?>>{
+    //所有要生成的代理类名称前缀
+    // prefix for all proxy class names
+    private static final String proxyClassNamePrefix = "$Proxy";
+    //为了生成的代理类不重名采取的名称后缀:后面代码会看到
+    // next number to use for generation of unique proxy class names
+    private static final AtomicLong nextUniqueNumber = new AtomicLong();
+    //生成代理类的Class
+    @Override
+    public Class<?> apply(ClassLoader loader, Class<?>[] interfaces) {
+      //接口数组生成Map
+      Map<Class<?>, Boolean> interfaceSet = new IdentityHashMap<>(interfaces.length);
+      //遍历代理类要实现的每个接口,注意必须是Interface,否则会抛异常
+      for (Class<?> intf : interfaces) {
+                Class<?> interfaceClass = null;
+                try {
+                    interfaceClass = Class.forName(intf.getName(), false, loader);
+                } catch (ClassNotFoundException e) {
+                }
+                //如果newProxyInstance中传入的ClassLoader并不是接口所属的ClassLoader,会抛异常
+                if (interfaceClass != intf) {
+                    throw new IllegalArgumentException(intf + " is not visible from class loader");
+                }
+               //如果newProxyInstance中传入的Class数组,数组项不属于Interface,抛异常
+                if (!interfaceClass.isInterface()) {
+                    throw new IllegalArgumentException(
+                        interfaceClass.getName() + " is not an interface");
+                }
+                //通过Set,防止同一个接口重复处理
+                if (interfaceSet.put(interfaceClass, Boolean.TRUE) != null) {
+                    throw new IllegalArgumentException(
+                        "repeated interface: " + interfaceClass.getName());
+                }
+      }
+      String proxyPkg = null;     //要生成的代理类所在package
+      int accessFlags = Modifier.PUBLIC | Modifier.FINAL;
+      //遍历每个接口,获取代理类所在package
+      for (Class<?> intf : interfaces) {
+                int flags = intf.getModifiers();
+                if (!Modifier.isPublic(flags)) {
+                    accessFlags = Modifier.FINAL;
+                    //获取接口名称
+                    //如:接口IStep,接口所在package为a.b.c,则(new IStep()).getClass().getName为:  "a.b.c.IStep"
+                    String name = intf.getName();
+                    int n = name.lastIndexOf('.');
+                    //获取接口所在package:对应IStep则为"a.b.c."
+                    String pkg = ((n == -1) ? "" : name.substring(0, n + 1));
+                    if (proxyPkg == null) {
+                        //proxyPkg不存在则赋值
+                        proxyPkg = pkg;
+                    } else if (!pkg.equals(proxyPkg)) {
+                        //注意:如果proxyPkg已经存在,说明传入的接口Class数组不止一个Clas项
+                        //为了如果数组中的接口包名不同,就会抛异常
+                        //所以  
+                          //1:保证所有Class关联的Interface包名相同
+                          //2:只传1个Interface的Class不就行了,有需要传多个的场景吗?
+                        throw new IllegalArgumentException(
+                            "non-public interfaces from different packages");
+                    }
+                }
+      }
+      ****
+      //这里用到了AtomicLong,用来拼接代理类的名称
+      long num = nextUniqueNumber.getAndIncrement();
+      //以接口"a.b.c.IStep"为例,其代理类名称为:"a.b.c.$Proxy0"
+      String proxyName = proxyPkg + proxyClassNamePrefix + num;
+      //1.2:生成代理类class,以byte[]形式返回
+      byte[] proxyClassFile = ProxyGenerator.generateProxyClass(proxyName, interfaces, accessFlags);
+      try {
+        //1.3:native方法生成代理类的Class,并返回
+        return defineClass0(loader, proxyName,proxyClassFile, 0, proxyClassFile.length);
+      } catch (ClassFormatError e) {
+        ****
+      }
+    }
+  }
+  //1.3:defineClass0是一个native方法
+  private static native Class<?> defineClass0(ClassLoader loader,String name,byte[] b, int off, int len);
+}
+
+//1.2:ProxyGenerator.generateProxyClass
+ProxyGenerator
+
+package sun.misc
+public class ProxyGenerator {
+  private String className;
+  private Class<?>[] interfaces;
+  private int accessFlags;
+
+  private ProxyGenerator(String var1, Class<?>[] var2, int var3) {
+        this.className = var1;
+        this.interfaces = var2;
+        this.accessFlags = var3;
+  }
+  public static byte[] generateProxyClass(final String var0, Class<?>[] var1, int var2) {
+    ProxyGenerator var3 = new ProxyGenerator(var0, var1, var2);
+    final byte[] var4 = var3.generateClassFile();
+    ***
+    return var4;
+  }
+}
+```
