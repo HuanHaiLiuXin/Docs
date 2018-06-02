@@ -1,0 +1,18 @@
+CoolViewPager
+颜色:0076A4
+Arial Rounded...	REGULAR 100	平滑
+
+
+
+
+A Cool ViewPager
+颜色:00756B
+等线		BOLD 	36	平滑
+
+
+
+
+created by HuanHaiLiuXin
+颜色:5A5A5A
+等线		BOLD 	24	平滑
+
