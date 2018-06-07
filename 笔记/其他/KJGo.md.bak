@@ -938,11 +938,11 @@ KJGo框架简介:
 								public abstract AbsProduct createProduct();
 							}
 							public class Product1Factory extends AbsProductFactory{
-								public AbsProduct createProduct(){
-									return new Product1();
-								}
-							}
-							public class Product2Factory extends AbsProductFactory{
+                            	public AbsProduct createProduct(){
+                            		return new Product1();
+                            	}
+                            }
+                            public class Product2Factory extends AbsProductFactory{
 								public AbsProduct createProduct(){
 									return new Product2();
 								}

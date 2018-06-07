@@ -1,4 +1,3 @@
-# 自己备忘,随便写
 # android网络框架源码解析及对比
 
 ## android常用网络框架对比
@@ -484,7 +483,7 @@
     Call<ResponseBody> call1 = service.testUrlAndQuery("headers",false);
     //http://localhost:4567/headers?showAll=false
     ```
-![image](http://upload-images.jianshu.io/upload_images/3501388-8ddf2bc7462a78a7?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![](https://user-gold-cdn.xitu.io/2018/5/27/163a1f24584c5f47?w=1158&h=667&f=png&s=36735)
 ### Retrofit使用流程
 - 步骤1：添加Retrofit库的依赖
     - Retrofit支持多种数据解析方式,使用时需要在build.gradle添加依赖
@@ -1201,62 +1200,3 @@
 	    - 动态代理生成的Class图示:
 **图片来自于[公共技术点之 Java 动态代理](http://a.codekk.com/detail/Android/Caij/%E5%85%AC%E5%85%B1%E6%8A%80%E6%9C%AF%E7%82%B9%E4%B9%8B%20Java%20%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86)**
 ![动态代理生成的Class结构.png](https://upload-images.jianshu.io/upload_images/3501388-3414720cf1e06c5d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-5. 策略模式:**简单讲就是替代if else if,根据参数选择对应算法处理**
-    - 定义:定义一组算法,将它们封装起来,彼此可以替换;是if else if的优化
-    - 场景:在一个处理过程中,涉及很多if else判断,对同样的数据进行不同逻辑的处理;可以将每个具体的逻辑处理进行封装.根据具体情况选择合适的封装过的实例处理.
-    - 作用:解决复杂逻辑下if else太复杂难以维护.
-    - 成员:策略接口+策略实现类+环境角色+客户端
-    - 代码实例
-      ```
-      场景:比如去洗头房,去过一次和去过100次,
-      洗头房给提供的技师水平是不同的(新手,老手,大师),
-      不同级别的技师,洗头的时间和手法都不同.
-
-      //1:创建策略接口
-      public interface JiShi{
-        public void service();
-      }
-      //2:创建具体策略角色
-      public class XinShou implements JiShi{
-        @Override
-        public void service(){
-          System.out.println("洗头时间30分钟");
-          System.out.println("手法一般!");
-        }
-      }
-      public class LaoShou implements JiShi{
-        @Override
-        public void service(){
-          System.out.println("洗头时间60分钟");
-          System.out.println("手法很好!");
-        }
-      }
-      public class DaShi implements JiShi{
-        @Override
-        public void service(){
-          System.out.println("洗头时间90分钟");
-          System.out.println("手法牛逼!");
-        }
-      }
-      //3:创建环境角色
-      public class JiShiContext{
-        //环境角色中持有策略角色
-        private JiShi ji;
-        //times:客人第几次来
-        public void xitou(int times){
-          if(times > 60){
-            ji = new DaShi();
-          }else if(times > 30){
-            ji = new LaoShou();
-          }else{
-            ji = new XinShou();
-          }
-          ji.service();
-        }
-      }
-      //4:客户端调用
-      JiShiContext context = new JiShiContext();
-      context.xitou(70);
-      context.xitou(40);
-      context.xitou(10);
-      ```
