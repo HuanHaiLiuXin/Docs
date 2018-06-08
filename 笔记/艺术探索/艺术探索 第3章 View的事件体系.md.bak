@@ -23,7 +23,7 @@ View是Android中所有控件的基类.
 > VelocityTracker用于追踪手指在滑动过程中的速度,包括水平和竖直方向的速度;
 
 VelocityTracker使用流程
-```java
+```
 //获取Velocity实例
 VelocityTracker vt = VelocityTracker.obtain();
 //添加要追踪速度的MotionEvents实例
@@ -57,7 +57,7 @@ vt.recycle();
 - View动画是对View的影响做操作,无法真正对View的位置参数,宽高等
 - 属性动画是对View中的属性,自定义属性进行变更,可以真正改变View的位置
 ### 3.改变一个View的LayoutParams来实现View的滑动.
-```java
+```
 MarginLayoutParams prams = (MarginLayoutParams)bt.getLayoutParams();
 //增加View的宽度100px
 params.width += 100;
@@ -77,7 +77,7 @@ bt.setLayoutParams(params);
         3. 在computeScroll中,首先用Scroller实例计算的当前的mScrollX,mScrollY,调用scrollTo对内容区进行滑动;然后调用postInvalidate重绘
         4. postInvalidate会继续触发draw.然后2,3,4会不断重复,直至滑动完成
     - 示例:
-        ```java
+        ```
         public class ArtView extends View{
             //自定义View中持有Scroller实例
             private Scroller scroller;
@@ -125,14 +125,14 @@ bt.setLayoutParams(params);
     - 可以使用ObjectAnimator或者ValueAnimator实现
     - ObjectAnimator需要指定属性,而ValueAnimator可以通过AnimatorUpdateListener的onAnimationUpdate方法对任意属性进行设置
     - ObjectAnimator实例:
-        ```java
+        ```
         Animator a1 = ObjectAnimator.ofInt(v,"scrollY",0,400).setDuration(400);
         Animator a2 = ObjectAnimator.ofInt(v,"scrollX",0,400).setDuration(400);
         a1.start();
         a2.start();
         ```
     - ValueAnimator实例:
-        ```java
+        ```
         ValueAnimator animator = ValueAnimator.ofInt(0,100).setDuration(1000);
         animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
@@ -145,69 +145,4 @@ bt.setLayoutParams(params);
         ```
 
 ## 4.View的事件分发机制
-> View的事件分发机制,就是对MotionEvent的分发逻辑.
 ### 1.点击事件的传递规则
-- ViewGroup点击事件传递规则伪代码
-    ```java
-    public boolean dispatchTouchEvent(MotionEvent ev){
-        boolean consume = false;
-        if(onInterceptTouchEvent(ev)){
-            //事件被拦截
-            if(onTouchListener != null && onTouchListener.onTouch(this,ev)){
-                //如果设置过OnTouchListener,先执行OnTouchListener.onTouch,
-                //onTouch为true,直接返回
-                return true;
-            }else{
-                //未设置OnTouchListener,或者OnTouchListener.onTouch返回false,
-                //则调用onTouchEvent返回
-                return onTouchEvent(ev);
-            }
-        }else{
-            //事件未被拦截,则将事件传递至对应的子View
-            consume = child.dispatchTouchEvent(ev);
-        }
-        return consume;
-    }
-    onTouchEvent是继承的View的,看View即可.
-    ```
-- View点击事件传递规则伪代码
-    ```java
-    public boolean dispatchTouchEvent(MotionEvent event) {
-        if(onTouchListener != null && onTouchListener.onTouch(this,ev)){
-            //如果设置过OnTouchListener,先执行OnTouchListener.onTouch,
-            //onTouch为true,直接返回
-            return true;
-        }else{
-            //未设置OnTouchListener,或者OnTouchListener.onTouch返回false,
-            //则调用onTouchEvent返回
-            return onTouchEvent(ev);
-        }
-    }
-    public boolean onTouchEvent(MotionEvent event) {
-        //View的onTouchEvent,默认返回true,除非不可点击
-        boolean clickable = CLICKABLE || LONG_CLICKABLE;
-        if(OnClickListener != null && clickable && 收到了ACTION_DOWN和ACTION_UP){
-            //可点击,且接收过DOWN和UP,设置过的OnClickListener才会执行
-            OnClickListener.onClick(this);
-        }
-        return clickable;
-    }
-    ```
-- 点击事件传递规则结论
-    1. 一个事件被消耗:拦截了事件的View
-        - 设置的OnTouchListener.onTouch返回true
-        - 或View的onTouchEvent返回true
-    2. 同一事件序列:从手指接触屏幕开始,到离开屏幕为止.down,move....up
-    3. 正常情况下,一个事件序列只能被1个View拦截且消耗.
-    4. 如果View拦截了ACTION_DOWN事件,但没有消耗(onTouchEvent返回了false),那么事件序列中后续事件都会重新交给它的父元素处理,即调用父元素的onTouchEvent.
-    5. 如果View仅消耗ACTION_DOWN事件,但后续事件都不消耗,那么事件会消失,并不会调用父元素的onTouchEvent,当前View会持续受到后续事件,最终这些事件交友Activity处理.
-    6. ViewGroup默认不拦截事件,onInterceptTouchEvent默认返回false
-    7. View没有onInterceptTouchEvent,dispatchTouchEvent中获取到事件:
-        - 有OnTouchListener则执行OnTouchListener.onTouch,onTouch为true则直接返回true;
-        - 没有OnTouchListener,或者OnTouchListener.onTouch为false,则执行onTouchEvent
-    8. onTouchEvent默认返回true,除非不可点击
-        - CLICKABLE和LONG_CLICKABLE都是false,才表示不可点击,返回false;
-        - 可点击,且View接收过DOWN和UP,才执行OnClickListener的onClick;
-    9. 子View可以通过requestDisallowInterceptTouchEvent方法干预父元素的事件分发,但是ACTION_DOWN除外(后面会详解,先记住这条)
-
-### 2.点击事件的源码解析
