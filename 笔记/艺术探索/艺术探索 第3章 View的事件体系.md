@@ -208,6 +208,200 @@ bt.setLayoutParams(params);
     8. onTouchEvent默认返回true,除非不可点击
         - CLICKABLE和LONG_CLICKABLE都是false,才表示不可点击,返回false;
         - 可点击,且View接收过DOWN和UP,才执行OnClickListener的onClick;
-    9. 子View可以通过requestDisallowInterceptTouchEvent方法干预父元素的事件分发,但是ACTION_DOWN除外(后面会详解,先记住这条)
+    9. setOnClickListener会自动将View的CLICKABLE设为true;setOnLongClickListener则会自动将View的LONG_CLICKABLE设为true.
+    10. 子View可以通过requestDisallowInterceptTouchEvent方法干预父元素的事件分发,但是ACTION_DOWN除外(后面会详解,先记住这条)
 
 ### 2.点击事件的源码解析
+- requestDisallowInterceptTouchEvent如何生效，涉及另外2个方法：dispatchTouchEvent,resetTouchState，依次分析
+    - requestDisallowInterceptTouchEvent
+        ```java
+        ViewGroup.java
+        
+        @Override
+        public void requestDisallowInterceptTouchEvent(boolean disallowIntercept) {
+            if (disallowIntercept == ((mGroupFlags & FLAG_DISALLOW_INTERCEPT) != 0)) {
+                //1.1:若mGroupFlags已经添加过FLAG_DISALLOW_INTERCEPT，则：mGroupFlags & FLAG_DISALLOW_INTERCEPT！=0
+                //1.2:已经添加过FLAG_DISALLOW_INTERCEPT，再次添加(disallowIntercept为true),直接return
+                return;
+            }
+            if (disallowIntercept) {
+                //2.1.disallowIntercept为true,为mGroupFlags添加FLAG_DISALLOW_INTERCEPT
+                mGroupFlags |= FLAG_DISALLOW_INTERCEPT;
+            } else {
+                //2.2:disallowIntercept为false,为mGroupFlags移除FLAG_DISALLOW_INTERCEPT
+                mGroupFlags &= ~FLAG_DISALLOW_INTERCEPT;
+            }
+            if (mParent != null) {
+                //3:递归 添加或移除 当前ViewGroup其父View的FLAG_DISALLOW_INTERCEPT标志位
+                mParent.requestDisallowInterceptTouchEvent(disallowIntercept);
+            }
+        }
+        ```
+    - resetTouchState
+        ```java
+        private void resetTouchState() {
+            clearTouchTargets();
+            resetCancelNextUpFlag(this);
+            //关键的来了,在resetTouchState中,会为mGroupFlags移除FLAG_DISALLOW_INTERCEPT
+            mGroupFlags &= ~FLAG_DISALLOW_INTERCEPT;
+            mNestedScrollAxes = SCROLL_AXIS_NONE;
+        }
+        ```
+    - dispatchTouchEvent
+        ```java
+        @Override
+        public boolean dispatchTouchEvent(MotionEvent ev) {
+            ****
+            boolean handled = false;
+            if (onFilterTouchEventForSecurity(ev)) {
+                final int action = ev.getAction();
+                final int actionMasked = action & MotionEvent.ACTION_MASK;
+                if (actionMasked == MotionEvent.ACTION_DOWN) {
+                    cancelAndClearTouchTargets(ev);
+                    //1:ACTION_DOWN时候回调用resetTouchState:resetTouchState会移除mGroupFlags中的FLAG_DISALLOW_INTERCEPT
+                    resetTouchState();
+                }
+                final boolean intercepted;
+                if (actionMasked == MotionEvent.ACTION_DOWN|| mFirstTouchTarget != null) {
+                    //ACTION_DOWM 或 存在处理当前事件的子元素
+                    
+                    //2.1:ACTION_DOWM情况下,mGroupFlags中的FLAG_DISALLOW_INTERCEPT在resetTouchState()被移除，
+                    //(mGroupFlags & FLAG_DISALLOW_INTERCEPT) = 0,所以ACTION_DOWM情况下disallowIntercept一定为false;
+                    //2.2:不是ACTION_DOWM情况下：
+                        //2.2.1:如果调用过requestDisallowInterceptTouchEvent(true),则 mGroupFlags & FLAG_DISALLOW_INTERCEPT!=0,disallowIntercept为true;
+                        //2.2.2:若未调用过requestDisallowInterceptTouchEvent或requestDisallowInterceptTouchEvent(false),则 mGroupFlags & FLAG_DISALLOW_INTERCEPT=0，disallowIntercept为false
+                        
+                    final boolean disallowIntercept = (mGroupFlags & FLAG_DISALLOW_INTERCEPT) != 0;
+                    if (!disallowIntercept) {
+                        //ACTION_DOWM情况下,disallowIntercept为false,一定会执行onInterceptTouchEvent判断是否拦截事件
+                        //非ACTION_DOWN情况下,若未调用或requestDisallowInterceptTouchEvent(false),disallowIntercept为false,也会执行onInterceptTouchEvent
+                        intercepted = onInterceptTouchEvent(ev);
+                        ev.setAction(action); // restore action in case it was changed
+                    } else {
+                        //非ACTION_DOWN 且 存在处理当前事件的子元素 且 执行过requestDisallowInterceptTouchEvent(true),则不再拦截
+                        intercepted = false;
+                    }
+                } else {
+                    //非ACTION_DOWN 且 不存在处理当前事件的子元素，一律拦截
+                    intercepted = true;
+                }
+            }
+            ****
+        }
+        ```
+    - 总结以上源码可知：
+        - 在ACTION_DOWN情况下，不论是否调用过requestDisallowInterceptTouchEvent(true)，一定会执行onInterceptTouchEvent判断是否拦截事件
+        - 非ACTION_DOWN情况下：
+            - 不存在处理当前事件的子元素，一律拦截 
+            - 存在处理当前事件的子元素，且执行过requestDisallowInterceptTouchEvent(true)，则ViewGroup不拦截事件，交由子元素处理
+            - 存在处理当前事件的子元素，若未调用或requestDisallowInterceptTouchEvent(false),会执行onInterceptTouchEvent判断是否拦截事件
+- mFirstTouchTarget
+    - 在diapatchTouchEvent中用到的mFirstTouchTarget(处理当前事件的子元素),其赋值也是在dispatchTouchEvent中,在dispatchTouchEvent中调用addTouchTarget为mFirstTouchTarget赋值
+    - [dispatchTouchEvent详解](https://www.jianshu.com/p/238d1b753e64)
+    - 源码分析：承接上面dispatchTouchEvent
+        ```java
+        @Override
+        public boolean dispatchTouchEvent(MotionEvent ev) {
+            ****
+            boolean handled = false;
+            if (onFilterTouchEventForSecurity(ev)) {
+                //承接上面dispatchTouchEvent部分
+                ****
+                final boolean intercepted;
+                if (actionMasked == MotionEvent.ACTION_DOWN|| mFirstTouchTarget != null) {
+                    ****
+                } else {
+                    //非ACTION_DOWN 且 不存在处理当前事件的子元素，一律拦截
+                    intercepted = true;
+                }
+                
+                //继续分析mFirstTouchTarget赋值过程：
+                final boolean canceled = resetCancelNextUpFlag(this) || actionMasked == MotionEvent.ACTION_CANCEL;
+                if (!canceled && !intercepted) {
+                    //事件不是取消事件，也没有拦截那么就要判断
+                    if (actionMasked == MotionEvent.ACTION_DOWN  
+                        || (split && actionMasked == MotionEvent.ACTION_POINTER_DOWN)  
+                        || actionMasked == MotionEvent.ACTION_HOVER_MOVE) {
+                        ****
+                        final int childrenCount = mChildrenCount;
+                        if (newTouchTarget == null && childrenCount != 0) {
+                            //如果新的触摸对象为null（这个不是铁定的吗）并且当前ViewGroup有子元素
+                            final float x = ev.getX(actionIndex);  
+                            final float y = ev.getY(actionIndex);  
+                            //下面所做的工作，就是找到可以接收这个事件的子元素  
+                            final View[] children = mChildren;
+                            //是否使用自定义的顺序来添加控件  
+                            final boolean customOrder = isChildrenDrawingOrderEnabled();
+                            for (int i = childrenCount - 1; i >= 0; i--) {
+                                //如果是用了自定义的顺序来添加控件，那么绘制的View的顺序和mChildren的顺序是不一样的  
+                                //所以要根据getChildDrawingOrder取出真正的绘制的View  
+                                //自定义的绘制，可能第一个会画到第三个，和第四个，第二个画到第一个，这样里面的内容和Children是不一样的
+                                final int childIndex = customOrder ?  getChildDrawingOrder(childrenCount, i) : i;  
+                                final View child = children[childIndex];  
+                                //如果child不可以接收这个触摸的事件，continue
+                                //canViewReceivePointerEvents:View是否可见或正在执行动画
+                                //isTransformedTouchPointInView:点击事件坐标是否在View的范围内
+                                if (!canViewReceivePointerEvents(child) || !isTransformedTouchPointInView(x, y, child, null)) {  
+                                    continue;  
+                                }
+                                //获取新的触摸对象，如果当前的子View在之前的触摸目标的列表当中就返回touchTarget  
+                                //子View不在之前的触摸目标列表那么就返回null
+                                newTouchTarget = getTouchTarget(child);
+                                ****
+                                //dispatchTransformedTouchEvent实际上就是调用子元素的dispathTouchEvent
+                                if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+                                    //dispatchTransformedTouchEvent返回true,说明事件已经被子元素消耗掉，
+                                    //这是就应该对mFirstTouchTarget赋值
+                                    
+                                    // Child wants to receive touch within its bounds.  
+                                    mLastTouchDownTime = ev.getDownTime();  
+                                    mLastTouchDownIndex = childIndex;  
+                                    mLastTouchDownX = ev.getX();  
+                                    mLastTouchDownY = ev.getY();  
+                                    //关键点：addTouchTarget(child, idBitsToAssign)，对mFirstTouchTarget赋值
+                                    newTouchTarget = addTouchTarget(child, idBitsToAssign);  
+                                    alreadyDispatchedToNewTouchTarget = true;  
+                                    break;
+                                }
+                            }
+                        }
+                        ****
+                    }
+                }
+                ****
+            }
+            ****
+            return handled;
+        }
+        //addTouchTarget中完成了对mFirstTouchTarget的赋值
+        private TouchTarget addTouchTarget(View child,int pointerIdBits){
+            TouchTarget target = TouchTarget.obtain(child,pointerIdBits);
+            target.next = mFirstTouchTarget;
+            mFirstTouchTarget = target;
+            return target;
+        }
+        //View可见或正在执行动画,则返回true
+        private static boolean canViewReceivePointerEvents(@NonNull View child) {
+            return (child.mViewFlags & VISIBILITY_MASK) == VISIBLE || child.getAnimation() != null;
+        }
+        //点击事件的坐标点是否在View的范围内
+        protected boolean isTransformedTouchPointInView(float x, float y, View child,PointF outLocalPoint) {
+            final float[] point = getTempPoint();
+            point[0] = x;
+            point[1] = y;
+            transformPointToViewLocal(point, child);
+            //调用View的pointInView方法进行判断坐标点是否在View内
+            final boolean isInView = child.pointInView(point[0], point[1]);
+            if (isInView && outLocalPoint != null) {
+                outLocalPoint.set(point[0], point[1]);
+            }
+            return isInView;
+        }
+        ```
+    - mFirstTouchTarget赋值流程总结
+        1. 事件不是取消事件，还没有被拦截就继续判断
+        2. 遍历ViewGroup的所有子元素，获取能接收点击事件的子元素.子元素是能接收到事件需要满足2点：
+            1. 子元素可见,或子元素正在执行动画
+            2. 点击事件的坐标点位于子元素范围内
+        3. 能接收事件的子元素获取到，则通过dispatchTransformedTouchEvent调用子元素的dispatchTouchEvent.
+            - dispatchTouchEvent返回true,说明MotionEvent已经被子元素消耗掉，会调用addTouchTarget对mFirstTouchTarget赋值
