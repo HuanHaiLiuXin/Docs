@@ -405,3 +405,43 @@ bt.setLayoutParams(params);
             2. 点击事件的坐标点位于子元素范围内
         3. 能接收事件的子元素获取到，则通过dispatchTransformedTouchEvent调用子元素的dispatchTouchEvent.
             - dispatchTouchEvent返回true,说明MotionEvent已经被子元素消耗掉，会调用addTouchTarget对mFirstTouchTarget赋值
+    
+## 5.View的滑动冲突
+### 1.滑动冲突分类
+- 外部滑动方向和内部滑动方向不一致
+- 外部滑动方向和内部滑动方向一致
+- 多层控件，上面两种情况的嵌套
+### 2.滑动冲突的解决方式
+1. 外部拦截法
+    > 外部拦截法是指点击事件都先经过父容器的onInterceptTouchEvent,如果父容器需要此事件就返回true,不需要就返回false.实现方式比较符合点击事件的分发机制.需要重写父容器的onInterceptTouchEvent
+    - 外部拦截法伪代码
+        ```java
+        public boolean onInterceptTouchEvent(MotionEvent event){
+            boolean intercepted = false;
+            int x = (int) event.getX();
+            int y = (int) event.getY();
+            switch(event.getAction()){
+                case MotionEvent.ACTION_DOWN:
+                    intercepted = false;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if(当前ViewGroup需要拦截){
+                        intercepted = true;
+                    }else{
+                        intercepted = false;
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                    intercepted = false;
+                    break;
+                default:
+                    break;
+            }
+            return intercepted;
+        }
+        ```
+    - ACTION_DOWN必须返回false,否则后续的ACTION_MOVE,ACTION_UP就无法传递给子元素;
+    - ACTION_UP必须返回false,否则子元素的点击事件就无法触发
+    - ACTION_MOVE可以根据情况决定是否传递给子元素.
+2. 内部拦截法
+    > 内部拦截法是指父容器不拦截任何事件,所有事件都传递给子元素.如果子元素需要此事件则消耗掉,否则交给父容器进行处理.这种方式实现较复杂,需要重写子元素的dispatchTouchEvent,并需要配合requestDisallowInterceptTouchEvent方法才能正常工作. 一般都默认采用外部拦截法处理.
