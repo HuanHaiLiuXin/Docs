@@ -564,3 +564,67 @@
 7. 绘制代码的位置 与 绘制内容出现的位置 之间的关系,源自HenCoder
 ![](https://user-gold-cdn.xitu.io/2018/6/13/163f922afd1d5dcf?w=943&h=504&f=jpeg&s=86548)
 
+## 4.自定义View
+### 1.自定义View须知
+1. 让View支持wrap_content:重写onMeasure,设置宽/高为wrap_content时候默认宽/高
+2. 继承View,要在onDraw中处理padding,否则padding属性不起作用
+3. 继承ViewGroup,要在onMeasure和onLayout中考虑自身padding和子元素的margin,否则自身padding和子元素margin不起作用
+4. 在View内部尽量不要使用Handler,View本身就提供了post方法
+5. 处理好滑动冲突
+6. View中有线程或动画需要及时停止
+### 2.View中的几个方法
+[View生命周期](https://www.jianshu.com/p/08e6dab7886e)<br/>
+[onStartTemporaryDetach的应用](https://blog.csdn.net/industriously/article/details/53894214) 
+1. onAttachedToWindow
+    - 当View被添加到Window,会调用
+    - onAttachedToWindow发生在第一次调用onDraw之前,可能早于也可能晚于onMeasure
+2. onDetachedFromWindow
+    - 当View从Window中被移除,会调用
+    - 要被移除,因而线程动画在此方法中应停止并移除
+3. onStartTemporaryDetach
+    ```
+    /**
+     * This is called when a container is going to temporarily detach a child, with
+     * {@link ViewGroup#detachViewFromParent(View) ViewGroup.detachViewFromParent}.
+     * It will either be followed by {@link #onFinishTemporaryDetach()} or
+     * {@link #onDetachedFromWindow()} when the container is done.
+     */
+    public void onStartTemporaryDetach() {
+        removeUnsetPressCallback();
+        mPrivateFlags |= PFLAG_CANCEL_NEXT_UP_EVENT;
+    }
+    ```
+    - 源码可知:
+        1. 当ViewGroup要暂时性地移除子元素,会调用子元素的onStartTemporaryDetach
+        2. 子View要被暂时性移除,因而线程动画在此方法中应停止并移除
+        3. onStartTemporaryDetach执行结束,可能执行的方法有2个
+            - onFinishTemporaryDetach
+            - onDetachedFromWindow
+4. onFinishTemporaryDetach
+    ```
+    /**
+     * Called after {@link #onStartTemporaryDetach} when the container is done
+     * changing the view.
+     */
+    public void onFinishTemporaryDetach() {
+    }
+    ```
+    - 源码可知:
+        1. onFinishTemporaryDetach是在onStartTemporaryDetach执行完毕,才可能调用
+        2. onStartTemporaryDetach执行完毕,没有调用onDetachedFromWindow情况下,才会执行onFinishTemporaryDetach,表示父元素已经改变这个View结束,这里可以重启线程和动画
+5. onVisibilityChanged
+    - 当前View或其祖先的可见性改变时被调用
+    - 我们可以根据可见性,开启或停止线程及动画
+    ```
+    /**
+     * Called when the visibility of the view or an ancestor of the view has
+     * changed.
+     *
+     * @param changedView The view whose visibility changed. May be
+     *                    {@code this} or an ancestor view.
+     * @param visibility The new visibility, one of {@link #VISIBLE},
+     *                   {@link #INVISIBLE} or {@link #GONE}.
+     */
+    protected void onVisibilityChanged(@NonNull View changedView, @Visibility int visibility) {
+    }
+    ```
