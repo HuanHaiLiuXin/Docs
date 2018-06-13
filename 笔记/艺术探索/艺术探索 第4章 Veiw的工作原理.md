@@ -516,3 +516,51 @@
     - onLayout方法会遍历子View并调用子View的layout方法完成子元素的布局
 
 ### 3.draw过程
+1. draw
+    - 伪代码
+    ```
+    public void draw(Canvas canvas) {
+        drawBackground(canvas);     //private方法不可重写
+        onDraw(canvas);             //可重写
+        dispatchDraw(canvas);       //可重写
+        onDrawForeground(canvas);   //可重写
+    }
+    ```
+    - 绘制顺序依次:
+        - 绘制背景      private方法不可重写
+        - 绘制自身内容  可重写
+        - 绘制子元素    可重写
+        - 绘制装饰      可重写
+2. onDraw中绘制自身内容
+    - View中onDraw是个空实现,所以直接extends View,onDraw中的super.onDraw删掉无妨
+    ```
+    /**
+     * Implement this to do your drawing.
+     */
+    protected void onDraw(Canvas canvas) {
+    }
+    ```
+    - 自定义View继承已存在的空间,绘制代码写在super.onDraw(canvas)上面,自己绘制的内容会被控件的原内容盖住;写在super.onDraw(canvas)下面,自己绘制的内容会盖住控件原始内容
+3. dispatchDraw中绘制子元素
+4. onDrawForeground依次绘制:滑动边缘渐变+滚动条+前景
+5. setWillNotDraw(boolean willNotDraw)
+    - 如果我们自定义控件继承ViewGroup,并且自身不具备绘制功能,可以调用setWillNotDraw(true),系统会进行优化
+    - 如果明确知道一个ViewGroup需要通过onDraw绘制内容,必须在onDraw中显式调用setWillNotDraw(false)
+    ```
+    /**
+     * If this view doesn't do any drawing on its own, set this flag to
+     * allow further optimizations. By default, this flag is not set on
+     * View, but could be set on some View subclasses such as ViewGroup.
+     * Typically, if you override {@link #onDraw(android.graphics.Canvas)}
+     * you should clear this flag.
+     *
+     * @param willNotDraw whether or not this View draw on its own
+     */
+    public void setWillNotDraw(boolean willNotDraw) {
+        setFlags(willNotDraw ? WILL_NOT_DRAW : 0, DRAW_MASK);
+    }
+    ```
+6. 自定义View,有时候一段绘制代码写在不同的绘制方法中效果是一样的.但有一个例外：如果绘制代码既可以写在 onDraw() 里，也可以写在其他绘制方法里，那么优先写在 onDraw() ，因为 Android 有相关的优化，可以在不需要重绘的时候自动跳过  onDraw() 的重复执行，以提升开发效率。享受这种优化的只有 onDraw() 一个方法
+7. 绘制代码的位置 与 绘制内容出现的位置 之间的关系,源自HenCoder
+![](https://user-gold-cdn.xitu.io/2018/6/13/163f922afd1d5dcf?w=943&h=504&f=jpeg&s=86548)
+
