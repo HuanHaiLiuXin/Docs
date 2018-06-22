@@ -4,3 +4,7 @@
 ## 2.Drawable中比较重要的几个方法
 ## 3.Drawable子类用法
 ## 4.自定义Drawable
+
+> 别忘了有 ViewOutlineProvider .尝试一下能不能实现任意形状的轮廓;
+
+> Outline.java<br/>MODE_CONVEX_PATH <br/> public Path mPath;<br/>public void setConvexPath(@NonNull Path convexPath) {
