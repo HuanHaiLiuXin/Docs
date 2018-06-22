@@ -379,7 +379,7 @@
     - View的MeasureSpec生成规则可知,默认情况下,当View处于match_parent和wrap_content时,生成的MeasureSpec的SpecSize完全相同,都是父元素目前可使用的大小
     - 所以自定义View必须重写onMeasure,单独设置宽/高位wrap_content时View的大小
 4. 自定义View重写onMeasure解决wrap_content和match_parent大小一致问题,原生控件都会重写onMeasure
-    ```
+    ```java
     //宽/高为wrap_content时对应的默认尺寸
     private int default_wrapcontent_width = 100;
     private int default_wrapcontent_height = 100;
@@ -518,7 +518,7 @@
 ### 3.draw过程
 1. draw
     - 伪代码
-    ```
+    ```java
     public void draw(Canvas canvas) {
         drawBackground(canvas);     //private方法不可重写
         onDraw(canvas);             //可重写
@@ -533,7 +533,7 @@
         - 绘制装饰      可重写
 2. onDraw中绘制自身内容
     - View中onDraw是个空实现,所以直接extends View,onDraw中的super.onDraw删掉无妨
-    ```
+    ```java
     /**
      * Implement this to do your drawing.
      */
@@ -546,7 +546,7 @@
 5. setWillNotDraw(boolean willNotDraw)
     - 如果我们自定义控件继承ViewGroup,并且自身不具备绘制功能,可以调用setWillNotDraw(true),系统会进行优化
     - 如果明确知道一个ViewGroup需要通过onDraw绘制内容,必须在onDraw中显式调用setWillNotDraw(false)
-    ```
+    ```java
     /**
      * If this view doesn't do any drawing on its own, set this flag to
      * allow further optimizations. By default, this flag is not set on
@@ -582,7 +582,7 @@
     - 当View从Window中被移除,会调用
     - 要被移除,因而线程动画在此方法中应停止并移除
 3. onStartTemporaryDetach
-    ```
+    ```java
     /**
      * This is called when a container is going to temporarily detach a child, with
      * {@link ViewGroup#detachViewFromParent(View) ViewGroup.detachViewFromParent}.
@@ -601,7 +601,7 @@
             - onFinishTemporaryDetach
             - onDetachedFromWindow
 4. onFinishTemporaryDetach
-    ```
+    ```java
     /**
      * Called after {@link #onStartTemporaryDetach} when the container is done
      * changing the view.
@@ -615,7 +615,7 @@
 5. onVisibilityChanged
     - 当前View或其祖先的可见性改变时被调用
     - 我们可以根据可见性,开启或停止线程及动画
-    ```
+    ```java
     /**
      * Called when the visibility of the view or an ancestor of the view has
      * changed.
@@ -626,5 +626,54 @@
      *                   {@link #INVISIBLE} or {@link #GONE}.
      */
     protected void onVisibilityChanged(@NonNull View changedView, @Visibility int visibility) {
+    }
+    ```
+6. onWindowFocusChanged
+    - 当前View所属的Window获取或者失去焦点时候调用
+    - 当前View和其所属的Window,焦点状态是分开的.
+    - 当前View焦点状态变更被调用的是onFocusChanged
+    ```java
+    /**
+     * Called when the window containing this view gains or loses focus.  Note
+     * that this is separate from view focus: to receive key events, both
+     * your view and its window must have focus.  If a window is displayed
+     * on top of yours that takes input focus, then your own window will lose
+     * focus but the view focus will remain unchanged.
+     *
+     * @param hasWindowFocus True if the window containing this view now has
+     *        focus, false otherwise.
+     */
+    public void onWindowFocusChanged(boolean hasWindowFocus) {****}
+    
+    /**
+     * Called by the view system when the focus state of this view changes.
+     * @param gainFocus True if the View has focus; false otherwise.
+     */
+    protected void onFocusChanged(boolean gainFocus, @FocusDirection int direction,@Nullable Rect previouslyFocusedRect) {
+        ****
+    }
+    ```
+7. getChildDrawingOrder
+    - getChildDrawingOrder是ViewGroup中的1个方法,用来确定子View的绘制顺序
+    - 默认情况下,返回值等于参数值
+    - 如果想自定义ViewGroup中子View的绘制顺序,需要重写此方法,并先调用setChildrenDrawingOrderEnabled(true)
+    - isChildrenDrawingOrderEnabled()则是获取当前ViewGroup是否是按照顺序进行绘制的
+    ```java
+    /**
+     * Returns the index of the child to draw for this iteration. Override this
+     * if you want to change the drawing order of children. By default, it
+     * returns i.
+     * <p>
+     * NOTE: In order for this method to be called, you must enable child ordering
+     * first by calling {@link #setChildrenDrawingOrderEnabled(boolean)}.
+     *
+     * @param i The current iteration.
+     * @return The index of the child to draw this iteration.
+     *
+     * @see #setChildrenDrawingOrderEnabled(boolean)
+     * @see #isChildrenDrawingOrderEnabled()
+     */
+    protected int getChildDrawingOrder(int childCount, int i) {
+        return i;
     }
     ```

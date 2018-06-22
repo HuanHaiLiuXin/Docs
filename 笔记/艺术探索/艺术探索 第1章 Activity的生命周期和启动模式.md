@@ -87,3 +87,33 @@ onDestroy
     第一次BACK,S中的B出栈,S已不存在,回到后台任务栈,将AppName显示出来.AppName中仅有A;
     第二次BACK,AppName中的A也出栈,AppName也不存在了,回到了桌面.
     ```
+
+# 3.Activity的几个方法
+1. onWindowFocusChanged
+    - 当前Activity的Window获取或者失去焦点的时候调用
+    - onWindowFocusChanged是当前Activity对用户是否可见最好的标识,而不是onResume
+    - onWindowFocusChanged发生在onResume之后,发生在onPause之前
+    - onResume==> onWindowFocusChanged **** ==> onPause 
+    ```java
+    /**
+     * Called after {@link #onRestoreInstanceState}, {@link #onRestart}, or
+     * {@link #onPause}, for your activity to start interacting with the user.
+     * This is a good place to begin animations, open exclusive-access devices
+     * (such as the camera), etc.
+     *
+     * <p>Keep in mind that onResume is not the best indicator that your activity
+     * is visible to the user; a system window such as the keyguard may be in
+     * front.  Use {@link #onWindowFocusChanged} to know for certain that your
+     * activity is visible to the user (for example, to resume a game).
+     */
+    protected void onResume() {
+        ****
+    }
+    /**
+     * Called when the current {@link Window} of the activity gains or loses
+     * focus.  This is the best indicator of whether this activity is visible
+     * to the user.
+     */
+    public void onWindowFocusChanged(boolean hasFocus) {
+    }
+    ```
