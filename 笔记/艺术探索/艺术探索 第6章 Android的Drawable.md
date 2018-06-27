@@ -37,7 +37,7 @@
     - 是否开启抖动.设置true可以让高质量的图片在低质量的屏幕上保持较好的显示效果
 6. setFilterBitmap(boolean filter)
     - 是否开启滤波过滤.设置true可以提升Bitmap在缩放及旋转时的绘制效果
-7. setTint(@ColorInt int tintColor)<br/>setTintList(@Nullable ColorStateList tint)<br/>setColorFilter(@ColorInt int color, @NonNull PorterDuff.Mode mode)<br/>和Drawable着色有关,后续会介绍
+7. **setTint(@ColorInt int tintColor)<br/>setTintList(@Nullable ColorStateList tint)<br/>setColorFilter(@ColorInt int color, @NonNull PorterDuff.Mode mode)<br/>和Drawable着色有关,后续会介绍**
 8. setState(@NonNull final int[] stateSet)
     - 为当前Drawable设置1个状态值集合
     - 当现有状态和stateSet不同,触发onStateChange(stateSet)
@@ -49,7 +49,7 @@
     - 为当前Drawable实例设置图像级别，从0到10000
     - 当现在值和level不同,触发onLevelChange(level)
     - 如LevelListDrawable和ScaleDrawable会在onLevelChange中变更Drawable的绘制
-12. getOutline:获取当前Drawable实例的绘制区域轮廓,后续会介绍
+12. **getOutline:获取当前Drawable实例的绘制区域轮廓,后续会介绍**
 
 ### 2.Drawable中比较重要的几个方法
 ### 3.Drawable子类用法
