@@ -411,15 +411,77 @@ public class BitmapDrawable extends Drawable {
 [详见简书](https://www.jianshu.com/p/c56b762210f2)
 
 ### 3.Drawable中比较重要的方法
-
+#### 3.1.Drawable着色
+1. Drawable着色的通用代码
+```java
+//1:通过图片资源文件生成Drawable实例
+Drawable drawable = getResources().getDrawable(R.mipmap.ic_launcher).mutate();
+//2:先调用DrawableCompat的wrap方法
+drawable = DrawableCompat.wrap(drawable);
+//3:再调用DrawableCompat的setTint方法，为Drawable实例进行着色
+DrawableCompat.setTint(drawable, Color.RED);
+```
+2. Drawable.mutate()
+    - mutate()将为1个Drawable实例单独创建1个ConstantState进行关联,不与其他Drawable共享
+![](https://user-gold-cdn.xitu.io/2018/6/28/164454c61b9a9826?w=307&h=400&f=png&s=43896)
+    - 未执行mutate()的Drawable,和其他从同1资源生成的Drawable共享1个ConstantState
+![](https://user-gold-cdn.xitu.io/2018/6/28/164454f50371bf71?w=307&h=400&f=png&s=40118)
+3. DrawableCompat.wrap(@NonNull Drawable drawable)
+    - SDK>=23:DrawableCompat.wrap直接返回原始的Drawable实例
+    - 其余情况下,DrawableCompat.wrap返回了Drawable的子类DrawableWrapperGingerbread的一个新实例,且在updateTint方法中移除了该新实例关联过的ColorFilter,设置了该新实例的绘制范围和原始Drawable实例相同
+4. DrawableCompat.setTint(@NonNull Drawable drawable, @ColorInt int tint)
+    - 在SDK>=21:DrawableCompat.setTint执行的是Drawable原生的setTint方法
+    - 其余情况下,DrawableCompat.setTint本质上还是执行了Drawable中的setColorFilter方法
+#### 3.2:Drawable.getOutline引出ViewOutlineProvider,其用法如下
+**经试验,在SDK>=21下生效,且仅能生成 椭圆,圆角矩形,矩形 三种轮廓,尝试使用path生成任意多边形失败**
+```java
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+class Out0 extends ViewOutlineProvider{
+    @Override
+    public void getOutline(View view, Outline outline) {
+        outline.setRoundRect(0,0,view.getWidth(),view.getHeight(),40);
+    }
+}
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+class Out1 extends ViewOutlineProvider{
+    @Override
+    public void getOutline(View view, Outline outline) {
+        outline.setRoundRect(100,100,view.getWidth()-100,view.getHeight()-100,40);
+    }
+}
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+class Out2 extends ViewOutlineProvider{
+    @Override
+    public void getOutline(View view, Outline outline) {
+        Path path = new Path();
+        path.setFillType(Path.FillType.WINDING);
+        path.moveTo(0,0);
+        path.rLineTo(50,20);
+        path.rLineTo(50,30);
+        path.rLineTo(50,40);
+        path.rLineTo(50,50);
+        path.close();
+        Log.e("Jet","path.isConvex():"+path.isConvex());
+        outline.setConvexPath(path);
+    }
+}
+int outLineIndex = 0;
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+public void toggleOutline(View view) {
+    v.setClipToOutline(false);
+    if(outLineIndex == 0){
+        v.setOutlineProvider(new Out0());
+    }
+    else if(outLineIndex == 1){
+        v.setOutlineProvider(new Out1());
+    }
+    else if(outLineIndex == 2){
+        v.setOutlineProvider(new Out2());
+    }
+    v.setClipToOutline(true);
+    outLineIndex = (++outLineIndex) % 3;
+}
+```
 
 ### 4.Drawable子类用法
 [详见简书](https://www.jianshu.com/p/39f09ea26430)
-
-### 5.自定义Drawable
-
-> 别忘了有 ViewOutlineProvider .尝试一下能不能实现任意形状的轮廓;
-
-> Outline.java<br/>MODE_CONVEX_PATH <br/> public Path mPath;<br/>public void setConvexPath(@NonNull Path convexPath) {
-
-> 《Android开发艺术探索》对于Drawable的讲解相对简单.笔记内容主要来自之前自己写的文章.
