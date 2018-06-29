@@ -1,20 +1,20 @@
-### µ¥ÀýÄ£Ê½¶¨Òå
-È·±£Ä³1¸öÀàÖ»ÓÐ1¸öÊµÀý,¶øÇÒ×ÔÐÐÊµÀý»¯²¢ÏòÕû¸öÏµÍ³Ìá¹©Õâ¸öÊµÀý
-### µ¥ÀýÄ£Ê½Ê¹ÓÃ³¡¾°
-### synchronized Ïê½â
-- synchronizedÊÇJavaÖÐµÄ¹Ø¼ü×Ö,ÀûÓÃËø»úÖÆÀ´ÊµÏÖÍ¬²½
-- synchronizedÊ¹ÓÃÎ»ÖÃ
-    - ÐÞÊÎ´úÂë¿é
-        - 1:synchronized(this|Object){}     ÐÞÊÎ¶ÔÏó»ñÈ¡µÄÊÇ¶ÔÏóËø
-        - 2:synchronized(Àà.class){}        ÐÞÊÎÀà.class»ñÈ¡µÄÊÇÀàËø
-    - ÐÞÊÎ·½·¨
-        - 3:synchronized static method(){}      ÐÞÊÎ¾²Ì¬·½·¨»ñÈ¡µÄÊÇÀàËø
-        - 4:synchronized method(){}             ÐÞÊÎ·Ç¾²Ì¬·½·¨»ñÈ¡µÄÊÇ¶ÔÏóËø
-- Ã¿¸ö¶ÔÏóÓÐ1¸ö¶ÔÏóËø,1¸öÀàÏÂËùÓÐ¶ÔÏó¹²ÓÃ1¸öÀàËø
-- Ïß³ÌA»ñÈ¡ÁËÀàËø,ÔÚAÊÍ·ÅÀàËøÇ°,ÆäËûÏß³ÌÎÞ·¨»ñÈ¡µ½ÀàËø
-- Í¬1¸öÀàµÄ¶à¸ö¶ÔÏó,Æä¶à¸ö¶ÔÏóËø±Ë´Ë¶ÀÁ¢
-    - Ïß³ÌA»ñÈ¡ÁËS1µÄ¶ÔÏóËø,ÔÚAÊÍ·Å¶ÔÏóËøÖ®Ç°,ÆäËûÏß³ÌÎÞ·Á»ñÈ¡µ½S1µÄ¶ÔÏóËø
-    - Ïß³ÌA»ñÈ¡ÁËS1µÄ¶ÔÏóËø,²»Ó°ÏìÆäËûÏß³Ì»ñÈ¡S2,S3---µÄ¶ÔÏóËø
-- ¶ÔÏóËøºÍÀàËø±Ë´Ë¶ÀÁ¢
-    - Ïß³ÌA»ñÈ¡ÁËS1µÄ¶ÔÏóËø,¿ÉÒÔÍ¬Ê±»ñÈ¡S1ËùÊôÀàµÄÀàËø
-    - Ïß³ÌA»ñÈ¡ÁËS1µÄ¶ÔÏóËø,Ïß³ÌB¿ÉÒÔ»ñÈ¡S1ËùÊôÀàµÄÀàËø
+### å•ä¾‹æ¨¡å¼å®šä¹‰
+ç¡®ä¿æŸ1ä¸ªç±»åªæœ‰1ä¸ªå®žä¾‹,è€Œä¸”è‡ªè¡Œå®žä¾‹åŒ–å¹¶å‘æ•´ä¸ªç³»ç»Ÿæä¾›è¿™ä¸ªå®žä¾‹
+### å•ä¾‹æ¨¡å¼ä½¿ç”¨åœºæ™¯
+### synchronized è¯¦è§£
+- synchronizedæ˜¯Javaä¸­çš„å…³é”®å­—,åˆ©ç”¨é”æœºåˆ¶æ¥å®žçŽ°åŒæ­¥
+- synchronizedä½¿ç”¨ä½ç½®
+    - ä¿®é¥°ä»£ç å—
+        - 1:synchronized(this|Object){}     ä¿®é¥°å¯¹è±¡èŽ·å–çš„æ˜¯å¯¹è±¡é”
+        - 2:synchronized(ç±».class){}        ä¿®é¥°ç±».classèŽ·å–çš„æ˜¯ç±»é”
+    - ä¿®é¥°æ–¹æ³•
+        - 3:synchronized static method(){}      ä¿®é¥°é™æ€æ–¹æ³•èŽ·å–çš„æ˜¯ç±»é”
+        - 4:synchronized method(){}             ä¿®é¥°éžé™æ€æ–¹æ³•èŽ·å–çš„æ˜¯å¯¹è±¡é”
+- æ¯ä¸ªå¯¹è±¡æœ‰1ä¸ªå¯¹è±¡é”,1ä¸ªç±»ä¸‹æ‰€æœ‰å¯¹è±¡å…±ç”¨1ä¸ªç±»é”
+- çº¿ç¨‹AèŽ·å–äº†ç±»é”,åœ¨Aé‡Šæ”¾ç±»é”å‰,å…¶ä»–çº¿ç¨‹æ— æ³•èŽ·å–åˆ°ç±»é”
+- åŒ1ä¸ªç±»çš„å¤šä¸ªå¯¹è±¡,å…¶å¤šä¸ªå¯¹è±¡é”å½¼æ­¤ç‹¬ç«‹
+    - çº¿ç¨‹AèŽ·å–äº†S1çš„å¯¹è±¡é”,åœ¨Aé‡Šæ”¾å¯¹è±¡é”ä¹‹å‰,å…¶ä»–çº¿ç¨‹æ— å¦¨èŽ·å–åˆ°S1çš„å¯¹è±¡é”
+    - çº¿ç¨‹AèŽ·å–äº†S1çš„å¯¹è±¡é”,ä¸å½±å“å…¶ä»–çº¿ç¨‹èŽ·å–S2,S3---çš„å¯¹è±¡é”
+- å¯¹è±¡é”å’Œç±»é”å½¼æ­¤ç‹¬ç«‹
+    - çº¿ç¨‹AèŽ·å–äº†S1çš„å¯¹è±¡é”,å¯ä»¥åŒæ—¶èŽ·å–S1æ‰€å±žç±»çš„ç±»é”
+    - çº¿ç¨‹AèŽ·å–äº†S1çš„å¯¹è±¡é”,çº¿ç¨‹Bå¯ä»¥èŽ·å–S1æ‰€å±žç±»çš„ç±»é”
