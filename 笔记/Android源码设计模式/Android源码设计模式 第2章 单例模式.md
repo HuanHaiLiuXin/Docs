@@ -333,7 +333,8 @@ java虚拟机则会保证一个类的初始化方法在多线程或单线程环�
         }
     }
     ```
-3. 杜绝反序列化时重新生成单例类实例:implements Serializable + readResolve
+3. 杜绝反序列化时重新生成单例类实例:implements Serializable + readResolve<br/>
+    [序列化与反序列化的单例模式实现和readResolve()](https://www.cnblogs.com/345214483-qq/p/6472158.html)
     1. 无论是DCL还是静态内部类单例模式,在反序列化时候还是会创建新的单例类实例.<br/>要杜绝单例类实例在反序列化时重新生成对象,需要继承Serializable并加入readResolve.
     2. 代码实例:
     ```java
