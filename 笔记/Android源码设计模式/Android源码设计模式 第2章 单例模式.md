@@ -270,7 +270,141 @@ static:静态的,可以用于 变量,方法,代码块,内部类,静态导包
     StaticOrderTest:static
     null
     ```
+
+### 3.类只会加载一次[java类到底是如何加载并初始化的？](https://www.cnblogs.com/jimxz/p/3974939.html)
+java虚拟机则会保证一个类的初始化方法在多线程或单线程环境中正确的执行,并且只执行一次.
+
 ## 单例模式
 ### 单例模式定义
 确保某1个类只有1个实例,而且自行实例化并向整个系统提供这个实例
-### 单例模式使用场景
+### 单例模式要求
+1. private构造函数
+2. 通过static方法或者枚举返回单例类对象
+3. 确保多线程下单例类对象唯一
+4. 确保单例类对象在反序列化时不会重新构建对象
+### 单例模式常用实现方式
+1. DCL(Double Check Lock)单例模式
+    1. 类锁,加上对单例类实例2次校验,杜绝多线程环境下单例类实例的重复创建
+    2. 线程安全,需要时才初始化单例,且实例初始化后再次获取无需synchronized效率较高
+    ```java
+    public class Singleton{
+        private static Singleton sInstance = null;
+        //private构造函数
+        private Singleton(){}
+        //静态方法返回单利类实例
+        public static Singleton getInstance(){
+            if(sInstance == null){
+                //0:synchronized(Singleton.class)获取了Singleton的类锁
+                //比如多个线程都执行到这一步,只有获取了类锁的线程当前可以执行代码块内部逻辑
+                synchronized(Singleton.class){
+                    //1:对于第1次获取了类锁的线程A,sInstance是null,会执行sInstance的初始化
+                    //2:对于和A同时进入的其他线程,在A释放类锁后才进入代码块:
+                    //此时sInstance已经被A初始化过,sInstance!=null
+                    if(sInstance == null){
+                       sInstance = new Singleton();
+                    }
+                }
+            }
+            return sInstance;
+        }
+    }
+    ```
+    3. DCL缺陷:存在DCL失效问题
+        - DCL失效原因:sInstance = new Singleton();不是1个原子操作,这句代码最终被编译为多条指令,大致是3件事
+            1. 给Singleton实例分配内存
+            2. 初始化成员字段
+            3. 将sInstance指向分配的内存空间,此时sInstance就不是null了
+        - JVM允许乱序执行,真正的执行顺序可能是1->2->3,也可能是1->3->2;
+        - 如果是1->3->2,在3执行完毕,sInstance就不是null了,但2还没执行.
+        - 若存在线程B在A未进入synchronized(Singleton.class)代码内部时候刚刚进入getInstance方法内部.如果A刚刚执行完3,但2还没执行,此时sInstance已经不是null,则B会将sInstance直接取走.
+        - 直接取走未执行2的sInstance,其内部成员字段未初始化,使用就会出错.
+2. 静态内部类单例模式
+    1. 静态内部类的加载不依赖外部类的实例化;调用外部类方法,不涉及静态内部类,也不引起静态内部类的加载;只有被直接调用,静态内部类才加载,并加载其持有的静态成员;
+    2. java虚拟机会保证一个类的初始化方法在多线程或单线程环境中正确的执行,并且只执行一次
+    3. 上面的特性保证了静态内部类单例模式的多线程安全及延迟加载
+    ```java
+    public class Singleton{
+        private Singleton(){}
+        public static Singleton getInstance(){
+            return SingletonHolder.sInstance;
+        }
+        private static class SingletonHolder{
+            private static final Singleton sInstance = new Singleton();
+        }
+    }
+    ```
+3. 杜绝反序列化时重新生成单例类实例:implements Serializable + readResolve
+    1. 无论是DCL还是静态内部类单例模式,在反序列化时候还是会创建新的单例类实例.<br/>要杜绝单例类实例在反序列化时重新生成对象,需要继承Serializable并加入readResolve.
+    2. 代码实例:
+    ```java
+    public class RreadResolveSingleton implements Serializable{
+    	private static final long serialVersionUID = 329563533667755239L;
+    	private RreadResolveSingleton(){}
+    	public static RreadResolveSingleton getInstance(){
+    		return SingletonHolder.instance;
+    	}
+    	private static class SingletonHolder{
+    		private static final RreadResolveSingleton instance = new RreadResolveSingleton();
+    	}
+    	protected Object readResolve(){
+            System.out.println("调用了readResolve方法！");
+            return  SingletonHolder.instance;
+        }
+    }
+    public class RreadResolveTest {
+    	public static void main(String[] args) {
+    		try {
+    			RreadResolveSingleton singleTest = RreadResolveSingleton
+    					.getInstance();
+    			FileOutputStream fileOutputStream = new FileOutputStream(new File(
+    					"RreadResolveSingleton.txt"));
+    			ObjectOutputStream objectOutputStream = new ObjectOutputStream(
+    					fileOutputStream);
+    			objectOutputStream.writeObject(singleTest);
+    			objectOutputStream.close();
+    			fileOutputStream.close();
+    			System.out.println("內存中:" + singleTest.hashCode());
+    		} catch (IOException e) {
+    			e.printStackTrace();
+    		}
+    		try {
+    			FileInputStream fileInputStream = new FileInputStream(new File(
+    					"RreadResolveSingleton.txt"));
+    			ObjectInputStream objectInputStream = new ObjectInputStream(
+    					fileInputStream);
+    			RreadResolveSingleton singleTest = (RreadResolveSingleton) objectInputStream
+    					.readObject();
+    			objectInputStream.close();
+    			fileInputStream.close();
+    			System.out.println("反序列化:" + singleTest.hashCode());
+    		} catch (IOException e) {
+    			e.printStackTrace();
+    		} catch (ClassNotFoundException e) {
+    			e.printStackTrace();
+    		}
+    	}
+    }
+    打印结果:
+    內存中:865113938
+    调用了readResolve方法！
+    反序列化:865113938
+    
+    注释掉readResolve重试:
+    /*protected Object readResolve(){
+        System.out.println("调用了readResolve方法！");
+        return  SingletonHolder.instance;
+    }*/
+    內存中:865113938
+    反序列化:1442407170
+    ```
+4. 枚举单例模式
+    1. 枚举单例模式写法简单,默认枚举实例的创建就是线程安全的,且反序列化也不会创建新的枚举实例
+    2. 写法
+    ```java
+    public enum SingletonEnum{
+        INSTANCE;
+        public void doSth(){
+            System.out.println("do sth.");
+        }
+    }
+    ```
