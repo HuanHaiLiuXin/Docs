@@ -12,4 +12,5 @@
 - 然后将选好的 SSL/TLS版本+Cipher Suite,再加上服务器随机数,一起发给客户端:"Server Hello"
 - **选好的 SSL/TLS版本+Cipher Suite+客户端随机数+服务器随机数,服务器和客户端一人一份**
 #### 3. 服务器向客户端发送 服务器证书
-服务器证书结构:
+服务器证书结构:<br/>
+![服务器证书结构](https://github.com/HuanHaiLiuXin/Docs/blob/master/%E5%9B%BE%E7%A4%BA/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%AF%81%E4%B9%A6%E7%BB%93%E6%9E%84.png)
