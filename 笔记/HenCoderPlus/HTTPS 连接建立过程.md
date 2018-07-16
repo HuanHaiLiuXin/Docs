@@ -41,7 +41,12 @@
       - 客户端用 签发机构的签发机构的公钥 对 签发机构签名进行hash,得到 Hash2
       - 如果 Hash1=Hash2,说明证书签发机构也是可信的
 #### 4. Pre-master Secret
-- 客户端自己算出1个Pre-master Secret,客户端保存并发送给服务器,服务器保存Pre-master Secret.两边一人一份
+- 客户端自己算出1个Pre-master Secret,保存之,并将Pre-master Secret使用服务器公钥加密后发送给服务器,服务器解密后保存Pre-master Secret.两边一人一份
 - 客户端和服务器利用两边同样的 客户端随机数+服务器随机数+Pre-master Secret,用固定算法计算出 Master Secret
 - 所有的客户端和服务器沟通,都是用同样的算法计算出Master Secret
 - Master Secret得到后,客户端随机数+服务器随机数+Pre-master Secret就没用了,客户端和服务器都保存Master Secret
+- 客户端和服务器用Master Secret计算出:
+  - 真正加密通讯时使用的2个对称加密秘钥
+    - 客户端给服务器发消息使用的对称加密密钥M1
+    - 服务器给客户端发消息使用的对称加密秘钥M2
+    - M1和M2是2个秘钥,客户端及服务器2个秘钥都会保存
