@@ -11,7 +11,7 @@
 - 从客户端提供的所有 Cipher Suite 中选出要使用的 Cipher Suite
 - 然后将选好的 SSL/TLS版本+Cipher Suite,再加上服务器随机数,一起发给客户端:"Server Hello"
 - **选好的 SSL/TLS版本+Cipher Suite+客户端随机数+服务器随机数,服务器和客户端一人一份**
-#### 3. 服务器向客户端发送 服务器证书
+#### 3. 服务器向客户端发送 服务器证书,若客户端对服务器证书的验证通过,则客户端对服务器的信任建立成功
 **服务器证书结构:**
 <br/>
 1.证书本身信息(绿色部分)
@@ -40,3 +40,8 @@
       - 客户端把 签发机构基本信息,签发机构公钥,签发机构签名算法通过 签发机构签名算法中的hash算法得出 hash值 Hash1
       - 客户端用 签发机构的签发机构的公钥 对 签发机构签名进行hash,得到 Hash2
       - 如果 Hash1=Hash2,说明证书签发机构也是可信的
+#### 4. Pre-master Secret
+- 客户端自己算出1个Pre-master Secret,客户端保存并发送给服务器,服务器保存Pre-master Secret.两边一人一份
+- 客户端和服务器利用两边同样的 客户端随机数+服务器随机数+Pre-master Secret,用固定算法计算出 Master Secret
+- 所有的客户端和服务器沟通,都是用同样的算法计算出Master Secret
+- Master Secret得到后,客户端随机数+服务器随机数+Pre-master Secret就没用了,客户端和服务器都保存Master Secret
