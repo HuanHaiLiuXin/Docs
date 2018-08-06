@@ -4,6 +4,5 @@ C:\Users\Administrator\AppData\Local\Android\sdk
 JAVA_HOME
 C:\Program Files\Java\jdk1.8.0_111
 
-
 Path
 C:\Program Files\Java\jdk1.8.0_111\bin;D:\Program Files\ImageMagick-6.9.2-Q16;%SystemRoot%\system32;%SystemRoot%;%SystemRoot%\System32\Wbem;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\;D:\Program Files\TortoiseSVN\bin;C:\Program Files\TortoiseGit\bin;C:\Program Files\nodejs\;C:\Program Files\WIDCOMM\Bluetooth Software\;C:\Program Files\WIDCOMM\Bluetooth Software\syswow64;C:\Python27;C:\Python27\Scripts;D:\instantclient_11_2;%ANDROID_HOME%\tools;%ANDROID_HOME%\platform-tools;
