@@ -31,3 +31,6 @@
     4. JVM规范规定了Java方法栈中的2中异常
         1. 如果线程请求的栈深度大于虚拟机所允许的深度,将抛出StackOverflowError异常
         2. 如果虚拟机可以动态扩展，如果扩展时无法申请到足够的内存，就会抛出OutOfMemoryError异常
+5. 本地方法栈/Native Method Stack
+    1. 本地方法栈Java方法栈所发挥的作用是非常相似的,其区别不过是Java方法栈为虚拟机执行Java方法服务,而本地方法栈则是为虚拟机使用到的Native方法服务
+    2. 本地方法栈也会抛出StackOverflowError和OutOfMemoryError异常
