@@ -49,3 +49,53 @@
 5. 本地方法栈/Native Method Stack
     1. 本地方法栈Java方法栈所发挥的作用是非常相似的,其区别不过是Java方法栈为虚拟机执行Java方法服务,而本地方法栈则是为虚拟机使用到的Native方法服务
     2. 本地方法栈也会抛出StackOverflowError和OutOfMemoryError异常
+
+## 2.Java的基本类型
+#### 1.JVM的boolean类型
+1. 在JVM规范中,boolean类型被映射为int类型.true被映射为1,false被映射为0.
+2. 实例:
+    ```java
+    public class T3 {
+    	boolean tag = true;
+    	public static void main(String[] args) {
+    		T3 t = new T3();
+    		t.t();
+    	}
+    	private void t(){
+    	        //1:tag不是0吧?
+    		if(tag){
+    			System.out.println("tag不是0");
+    		}
+    		//2:tag真的是1吗?
+    		if(true == tag){
+    			System.out.println("tag真的是1");
+    		}
+    	}
+    }
+    
+    打印结果:
+    tag不是0
+    tag真的是1
+    ```
+    在经过编译后,上面的代码对于JVM的实际逻辑是:<br>
+    1. tag不是0吧?如果tag对应的是2,3等其他非0整数,也一样会打印
+    2. tag真的是1吗?因为true在JVM中对应的就是1,只要tag对应的整数不是1,就无法和true(1)相等.
+#### 2.Java的基本类型
+Java的8种基本类型,在JVM内存中,8种基本类型的默认值都是0
+#### 3.Float.NaN很特殊:Float.NaN不和任何float值相等,包括自身,除了“!=”始终返回true,所有其他比较结果都会返false
+```java
+float f = Float.intBitsToFloat(0x7fc00000);
+System.out.println("f:"+f);
+System.out.println("NaN>=1.0F:"+(f>=1.0F));
+System.out.println("NaN<=1.0F:"+(f<=1.0F));
+float NaN = Float.NaN;
+System.out.println("NaN==Float.NaN:"+(NaN==Float.NaN));
+System.out.println("NaN!=Float.NaN:"+(NaN!=Float.NaN));
+
+打印结果:
+f:NaN
+NaN>=1.0F:false
+NaN<=1.0F:false
+NaN==Float.NaN:false
+NaN!=Float.NaN:true
+```
