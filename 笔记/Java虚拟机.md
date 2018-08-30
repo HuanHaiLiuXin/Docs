@@ -202,3 +202,73 @@ NaN!=Float.NaN:true
                 1. 对于静态绑定的方法调用而言,实际引用是目标方法的指针
                 2. 对于需要动态绑定的方法调用,实际引用是1个方法表的索引.
                     - 方法表后面会详述
+#### 2.JVM中的虚方法调用的具体实现
+1. JVM中的虚方法调用
+    - Java里所有非私有实例方法调用都会被编译成invokevirtual指令,而接口方法调用都会被编译成invokeinterface指令.这两种指令,均属于JVM中的虚方法调用.
+2. 虚方法调用的目标方法,通过动态绑定确定
+    1. JVM的动态绑定是通过方法表实现
+        - JVM根据调用者的动态类型,在其对应的方法表中,根据索引值获取到目标方法
+    2. 如果虚方法调用指向1个标记为final的方法,JVM则静态绑定该final方法
+    3. 相对于静态绑定的非虚方法调用,虚方法调用更加耗时.
+3. 方法表
+    1. 方法表分类:
+        1. invokevirtual:使用虚方法表(virtual method table,vtable)
+        2. invokeinterface:使用接口方法表(interface method table,itable)
+    2. 方法表本质:
+        - 方法表本质上是1个数组,每个数组元素指向1个当前类及其祖先类中非私有实例方法.
+    3. 方法表特征:
+        1. 子类方法表中包含父类方法表中的所有方法
+        2. 子类方法在方法表中的索引值,与它所重写的父类方法的索引值相同.
+    4. JVM类加载的 链接/解析 阶段:符号引用解析成实际引用
+        1. 对于静态绑定的方法调用,实际引用指向具体的目标方法
+        2. 对于动态绑定的方法调用,实际引用是方法表的索引
+    5. 方法表实例
+        ```java
+        //父类
+        public class People{
+            public void eat(){}
+            public void drink(){}
+        }
+        //2个子类:白人,黑人
+        public class White extends People{
+            @Overrride
+            public void eat(){}
+            @Overrride
+            public void drink(){}
+        }
+        public class Black extends People{
+            @Overrride
+            public void eat(){}
+            @Overrride
+            public void drink(){}
+        }
+        //调用
+        public meetOnePeople(People p){
+            p.eat();
+            p.drink();
+        }
+        meetOnePeople(new People());
+        meetOnePeople(new White());
+        //meetOnePeople(new Black())原理和meetOnePeople(new White())类似
+        meetOnePeople(new Black());
+        ```
+        1. 父类People的方法表包含2个元素:0-eat,1-drink;
+        2. 子类White和Black方法表中包含People方法表中所有方法,且方法索引值和重写的父类一致,都是:0-eat,1-drink;
+        3. meetOnePeople(new People())
+            - JVM获取到调用者实际类型是People,获取到People对应的方法表,eat索引值是0,drink索引值是1,根据索引值获取到目标方法并执行;
+        4. meetOnePeople(new White())
+            - JVM获取到调用者实际类型是White,获取到White对应的方法表,eat索引值是0,drink索引值是1,根据索引值获取到目标方法并执行;
+4. JVM中JIT编译器(Just-In-Time Compiler/即时编译器)对动态绑定的优化
+    1. 方法内联:method inlining
+    2. 内联缓存:inlining cache
+5. 内联缓存的定义及规则
+    - 内联缓存就是缓存虚方法调用中调用者的动态类型及对应方法;之后执行过程中,如果匹配到已缓存的动态类型,则直接调用已缓存的目标方法,如果匹配失败,则退化至动态绑定方式.
+6. 内联缓存的分类
+    1. 单态内联缓存
+        - 只缓存了1种动态类型及其对应的目标方法.如果和调用者类型匹配,则直接调用对应的目标方法
+    2. 多态内联缓存
+        - 缓存有限种类的动态类型及对应目标方法.需要逐个和调用者进行比较,命中则调用对应的目标方法
+    3. 超多态内联缓存:就是原始动态绑定
+7. JVM中的JIT编译器默认的内联缓存策略:<br>
+    - 为节省内存,默认采取单内联缓存,保存调用者的动态类型及对应的目标方法;
+    - 当碰到新的调用者,如果类型匹配,则直接调用缓存的目标方法,不匹配则劣化至超多态内联缓存,在今后的执行过程中直接使用方法表进行动态绑定.
