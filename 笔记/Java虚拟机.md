@@ -272,3 +272,36 @@ NaN!=Float.NaN:true
 7. JVM中的JIT编译器默认的内联缓存策略:<br>
     - 为节省内存,默认采取单内联缓存,保存调用者的动态类型及对应的目标方法;
     - 当碰到新的调用者,如果类型匹配,则直接调用缓存的目标方法,不匹配则劣化至超多态内联缓存,在今后的执行过程中直接使用方法表进行动态绑定.
+## 5.JVM如何处理异常
+#### 1.异常处理的2大要素是 抛出异常 和 捕获异常.这两大要素共同实现程序流的非正常转移.
+1. 抛出异常的方式分为显式和隐式
+    1. 显式抛异常
+        - 显式抛异常的主体是应用程序,在应用程序中使用throw关键字手动抛出异常实例.
+    2. 隐式抛异常
+        - 隐式抛异常的主体是JVM,在JVM执行过程中,碰到无法继续执行的异常状态,自动抛出异常.
+2. 捕获异常涉及 try,catch,finally 3个代码块
+    1. try代码块:用来标记需要进行异常监控的代码
+    2. catch代码块:用来捕获在try代码块中触发的1种或多种指定类型的异常.
+        1. try后面可以跟多个catch代码块
+        2. 每个catch代码块可以用来捕获1种或多种指定类型异常
+        3. JVM会从上到下,从左到右匹配异常.前面的异常类型不能包含后面的,否则报错.
+            ```java
+            public void t4(){
+        		try {
+        		} 
+        		//每个catch代码块可以捕获1种或多种类型异常
+        		catch (NullPointerException | IOException e) {
+        		} 
+        		catch (IndexOutOfBoundsException e){
+        		}
+        		//这里会报错:
+        		Unreachable catch block for ArrayIndexOutOfBoundsException. 
+        		It is already handled by the catch block for IndexOutOfBoundsException
+        		catch (ArrayIndexOutOfBoundsException e){
+        		}
+        		finally{}
+        	}
+            ```
+    3. finally代码块:跟在try和catch之后,用来声明1段必定会运行的代码.finally的设计初衷是为了避免跳过某些关键的清理代码,如关闭已打开的系统资源.
+#### 2.异常实例的构造十分昂贵/耗费性能
+#### 3.JVM如何捕获异常
