@@ -272,8 +272,11 @@ NaN!=Float.NaN:true
 7. JVM中的JIT编译器默认的内联缓存策略:<br>
     - 为节省内存,默认采取单内联缓存,保存调用者的动态类型及对应的目标方法;
     - 当碰到新的调用者,如果类型匹配,则直接调用缓存的目标方法,不匹配则劣化至超多态内联缓存,在今后的执行过程中直接使用方法表进行动态绑定.
+
 ## 5.JVM如何处理异常
-#### 1.异常处理的2大要素是 抛出异常 和 捕获异常.这两大要素共同实现程序流的非正常转移.
+#### 1.异常的分类:所有异常直接或间接继承于Throwable
+![](https://user-gold-cdn.xitu.io/2018/8/31/1658edb0e26e30a1?w=798&h=545&f=png&s=30000)
+#### 2.异常处理的2大要素是 抛出异常 和 捕获异常.这两大要素共同实现程序流的非正常转移.
 1. 抛出异常的方式分为显式和隐式
     1. 显式抛异常
         - 显式抛异常的主体是应用程序,在应用程序中使用throw关键字手动抛出异常实例.
@@ -303,5 +306,105 @@ NaN!=Float.NaN:true
         	}
             ```
     3. finally代码块:跟在try和catch之后,用来声明1段必定会运行的代码.finally的设计初衷是为了避免跳过某些关键的清理代码,如关闭已打开的系统资源.
-#### 2.异常实例的构造十分昂贵/耗费性能
-#### 3.JVM如何捕获异常
+#### 3.异常实例的构造十分昂贵/耗费性能
+因为在构造异常实例时,JVM需要生成该异常的栈轨迹(stack trace).JVM会逐一访问当前线程的Java方法栈的栈帧,并记录各种调试信息:
+- 栈帧指向的方法名字
+- 栈帧指向的方法的所在的类名,文件名
+- 在代码的第几行触发该异常
+- 代码实例:
+    ```java
+    public class ExceptionCreate {
+    	public static void main(String[] args) {
+    		ExceptionCreate c = new ExceptionCreate();
+    		c.t();
+    	}
+    	public void t(){
+    		t1();
+    	}
+    	public void t1(){
+    		t2();
+    	}
+    	public void t2(){
+    		t3();
+    	}
+    	int[] a = new int[]{};
+    	public void t3(){
+    		int o = a[3];
+    	}
+    }
+    
+    Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: 3
+    	at github.com.HuanHaiLiuXin.ExceptionCreate.t3(ExceptionCreate.java:19)
+    	at github.com.HuanHaiLiuXin.ExceptionCreate.t2(ExceptionCreate.java:15)
+    	at github.com.HuanHaiLiuXin.ExceptionCreate.t1(ExceptionCreate.java:12)
+    	at github.com.HuanHaiLiuXin.ExceptionCreate.t(ExceptionCreate.java:9)
+    	at github.com.HuanHaiLiuXin.ExceptionCreate.main(ExceptionCreate.java:6)
+    ```
+#### 4.JVM如何捕获异常
+1. 首先对比1下源码和编译后的class文件
+    1. 源码:
+        ```java
+        public class TException {
+        	public static void main(String[] args) {
+        		try {
+        			TException t = new TException();
+        			t.t1();
+        		} catch (Exception e) {
+        			System.out.println("捕获到异常");
+        		}
+        	}
+        	public void t1(){
+        		try {
+        			t3();
+        		} catch (Exception e) {
+        			e.printStackTrace();
+        		}
+        	}
+        	public void t2(){
+        		try {
+        			int a = 0;
+        		} catch (NullPointerException | IndexOutOfBoundsException e) {
+        			e.printStackTrace();
+        		} finally{
+        			System.out.println("t2 finally");
+        		}
+        	}
+        	public void t3(){
+        		throw new RuntimeException("抛出运行时异常");
+        	}
+        }
+        ```
+    2. class文件
+![](https://user-gold-cdn.xitu.io/2018/8/31/1658edbea1c7835b?w=945&h=2115&f=png&s=50700)
+2. 在class文件中,每个含有catch方法块或finally方法块的方法都包含1个异常表/Exception table.
+    1. 每个异常表包含多个条目,每个条目包含from,to,target,type
+        ```
+        Exception table:
+       from    to  target type
+           0     2     5   Class java/lang/NullPointerException
+           0     2     5   Class java/lang/IndexOutOfBoundsException
+           0     2     9   any
+           5     6     9   any
+           9    10     9   any
+        ```
+        1. from:代码监控范围从索引为from的字节码开始
+        2. to:代码监控范围从索引为to的字节码结束,不包括to
+        3. target:这个异常处理器从索引为target的字节码开始
+        4. type:该异常处理器所捕获的异常类型
+    2. 每个try+catch块生成异常表中的1个条目;
+    3. 每个finally块生成异常表中的3个条目;见图:![](https://user-gold-cdn.xitu.io/2018/8/31/1658ef58dd0c94be?w=988&h=325&f=png&s=24615)
+3. JVM捕获异常过程
+    - 程序触发异常时,JVM会在异常发生的方法对应的异常表中从上到下进行遍历.
+        - 当触发异常的字节码索引值在异常表某个条目的from和to范围内,JVM会判断抛出的异常类型和该条目的type是不是匹配.
+            - 如果匹配,JVM会将控制流转移至该条目target对应的字节码
+        - 如果当前异常表所有条目都不匹配,则会弹出当前方法对应的Java栈帧.并在当前方法的调用方法中重复上面过程.
+            - 最坏情况下,JVM需要遍历当前线程的Java方法栈上所有栈帧对应的方法的异常表.
+#### 5.原本的异常被忽略问题
+1. 1个finally代码块会编译为异常表中3个条目<br>
+第3个条目用于捕获try触发但catch未捕获的异常并抛出,或捕获catch代码块触发的异常并抛出.<br>
+如果catch代码块捕获了try代码块触发的异常A,且catch代码块触发了异常B,那finally代码块捕获并重新抛出的异常是:B!!!!<br>
+如何解决原本的异常被忽略的问题?
+2. Java 7引入了try-with-resources语法糖.可以解决1中的问题.
+    1. Java 7引入了Supressed异常来解决1中的问题,允许开发人员将1个异常付于另1个异常之上.因此抛出的异常可以附带多个异常信息.
+    2. try-with-resources在字节码层面自动使用Supressed异常.try-with-resources除了自动使用Supressed异常,更重要的是精简了资源打开关闭的用法.<br>
+    try-with-resources示例:![](https://user-gold-cdn.xitu.io/2018/8/31/1658f1e4d2cd1eb7?w=704&h=944&f=png&s=25395)
