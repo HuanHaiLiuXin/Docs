@@ -619,3 +619,106 @@ Instance size: 48 bytes
 Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
 ```
 **2.缓存行**<br>
+1. CPU缓存
+    1. CPU获取内存中的一条数据大概需要200多个CPU周期(CPU cycles), 而从CPU寄存器获取一条数据1个CPU周期就够了
+    2. CPU设计者们就给CPU加上了缓存(CPU Cache). 如果你需要对同一批数据操作很多次,那么把数据放至离CPU更近的缓存, 会给程序带来很大的速度提升
+    3. 现代CPU的缓存结构一般分三层,L1,L2和L3.
+        1. 级别越小的缓存,越接近CPU,意味着速度越快且容量越少
+        2. 当CPU运作时,它首先去L1寻找它所需要的数据,然后去L2,然后去L3.
+            <br>如果三级缓存都没找到它需要的数据,则从内存里获取数据.
+            <br>寻找的路径越长,耗时越长.
+            <br>所以如果要非常频繁的获取某些数据,保证这些数据在L1缓存里,这样速度将非常快
+    4. CPU到各级缓存及内存的大概速度:
+        <table align="center">
+            <tr>
+                <td>从CPU到</td>
+                <td>大约需要的CPU周期</td>
+                <td>大约需要的时间(单位ns)</td>
+            </tr>
+            <tr>
+                <td>CPU寄存器</td>
+                <td>1 cycle</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>L1 Cache</td>
+                <td>~3-4 cycles</td>
+                <td>~0.5-1 ns</td>
+            </tr>
+            <tr>
+                <td>L2 Cache</td>
+                <td>~10-20 cycles</td>
+                <td>~3-7 ns</td>
+            </tr>
+            <tr>
+                <td>L3 Cache</td>
+                <td>~40-45 cycles</td>
+                <td>~15 ns</td>
+            </tr>
+            <tr>
+                <td>跨槽传输</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>内存</td>
+                <td>~120-240 cycles</td>
+                <td>~60-120ns</td>
+            </tr>
+        </table>
+2. CPU缓存行
+    1. CPU缓存是由CPU缓存行构成.每个缓存行是64字节.
+    2. CPU存取缓存都是1行缓存行1行缓存行这样使用,即 缓存行是CPU存取缓存的最小单位.
+    3. JVM要求long,double,以及非压缩指针状态下的引用字段地址为8字节的倍数,也是为了同1字段仅存在于1个CPU缓存行中.
+        - 比如1个long类型字段占据8个字节,如果地址不是8字节的倍数,比如是60字节,那么加上占据的8个字节,就超过了64字节,需要占用2个缓存行进行存储,读取时候也要读取两个缓存行.这样对性能就很不利.
+    4. 在Java编程中也要注意CPU缓存行.尽量避免跨缓存行读取数据,这样会增加耗时.实例.
+        ```java
+        public class CpuCacheTest {
+            private static final int RUNS = 10;
+            private static final int DIMENSION_1 = 1024 * 1024;
+            private static final int DIMENSION_2 = 6;
+            //longs中每1个一维数组中有6个long.
+            //不启用32位压缩指针情况下,每个1维数组大小:16+8*6=64字节,正好占用1个完整CPU缓存行.
+            //启用32位压缩指针,占用12+8*6=60字节.则2个一维数组间有4个字节的对象间的填充.
+            private static long[][] longs;
+        
+            public static void main(String[] args) throws Exception {
+                Thread.sleep(10000);
+                longs = new long[DIMENSION_1][];
+                for (int i = 0; i < DIMENSION_1; i++) {
+                    longs[i] = new long[DIMENSION_2];
+                    for (int j = 0; j < DIMENSION_2; j++) {
+                        longs[i][j] = 0L;
+                    }
+                }
+                System.out.println("starting....");
+        
+                final long start = System.nanoTime();
+                long sum = 0L;
+                for (int r = 0; r < RUNS; r++) {
+                    //1:跨CPU缓存行读取数据,效率低下
+                    for (int j = 0; j < DIMENSION_2; j++) {
+                        //每个1维数组占据1个CPU缓存行,每次变更i,是跨缓存行读取数据
+                        for (int i = 0; i < DIMENSION_1; i++) {
+                            sum += longs[i][j];
+                        }
+                    }
+                    //2:同1个CPU缓存行中读取数据,效率高
+        //            for (int i = 0; i < DIMENSION_1; i++) {
+        //                for (int j = 0; j < DIMENSION_2; j++) {
+        //                    sum += longs[i][j];
+        //                }
+        //            }
+                }
+                System.out.println("duration = " + (System.nanoTime() - start));
+            }
+        }
+        
+        打印结果:
+        1:跨CPU缓存行读取数据,效率低下
+        starting....
+        duration = 336318104
+        2:同1个CPU缓存行中读取数据,效率高
+        starting....
+        duration = 90164258
+        ```
