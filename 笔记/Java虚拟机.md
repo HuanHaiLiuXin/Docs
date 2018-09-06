@@ -510,7 +510,7 @@ NaN!=Float.NaN:true
     1. 通过调用构造器来初始化实例字段
     2. 当我们调用构造器,它会优先调用父类的构造器,直至Object类.这些构造器的调用者都是通过new指令新建而来的对象.
         - 通过new指令新建的对象,它的内存其实涵盖了所有父类中的实例字段.包括父类的私有实例字段,或者子类的实例字段隐藏了父类的同名实例字段.但是子类实例还是会为这些父类实例字段分配内存.<br>后面会通过Jol工具查看到.
-#### 2.Java对象的内存布局:压缩指针+字段重排列
+#### 2.Java对象的内存布局:压缩指针+内存对齐+字段重排列
 #### 3.压缩指针
 1. 对象头<br>
     - JVM中,每个Java对象都有1个对象头.对象头由 标记字段+类型指针 构成.
@@ -522,6 +522,100 @@ NaN!=Float.NaN:true
             2. 在64位JVM中,类型指针也占64位/8个字节
         3. 可见,默认情况下,每个对象的对象头就占据了16个字节
 2. 压缩指针
-    - 为了减小内存占用,64位JVM引入了压缩指针的概念,将原本64位的Java对象指针压缩为32位.
-        1. 对象头的类型指针也被压缩为32位/4个字节.使得对象头的大小从16字节降为12字节.
-        2. 压缩类型除了应用于对象头类型指针,也应用于引用类型的字段及引用类型的数组.
+> 为了减小内存占用,64位JVM引入了压缩指针的概念,将原本64位的Java对象指针压缩为32位.
+1. 对象头的类型指针也被压缩为32位/4个字节.使得对象头的大小从16字节降为12字节.
+2. 压缩类型除了应用于对象头类型指针,也应用于引用类型的字段及引用类型的数组.
+3. 默认情况下,JVM的32位压缩指针可以寻址到32GB的地址空间,超过32GB就会关闭压缩指针.
+#### 4.内存对齐
+> 内存对齐:JVM堆中对象的起始地址需要对齐8字节的倍数.
+1. JVM堆中对象的起始地址需要对齐8字节的倍数,如果1个对象用不到8N个字节,那么空白的那部分就被浪费了.浪费掉的空间成为对象间的填充
+2. 内存对齐不仅存在于对象之间,也存在于对象中的字段之间
+    1. JVM要求long,double,以及非压缩指针状态下的引用字段地址为8字节的倍数.
+    2. 字段对其的1个原因,是让1个字段只存在于CPU的同1个缓存行中.如果字段没有内存对齐,该字段的读取需要替换两个缓存行,该字段的存储也会污染两个缓存行.跨行存储及跨行读取1个字段对程序效率不利.
+#### 5.字段重排列
+> 字段重排列:JVM重写分配字段的先后顺序,以达到内存对齐的目的
+1. 使用了32位压缩指针的64位JVM,字段重排后第1个字段地址要对齐4字节的倍数;关闭压缩指针的64为JVM,字段重排列后第1个字段地址要对齐8字节的倍数;
+2. 如果1个字段占据N字节,那么该字段的偏移量要对齐N字节的倍数.偏移量指该字段地址与对象起始地址的差值.
+#### 6.Jol工具查看类中字段的内存分布
+[code-tools包含1系列工具,Jol是工具之一](http://openjdk.java.net/projects/code-tools/)
+<br>
+[jol](http://openjdk.java.net/projects/code-tools/jol/)
+<br>
+**Jol工具使用方法:**<br>
+1. 首先下载jol-cli-0.9-full.jar,已存在[github](https://github.com/HuanHaiLiuXin/Docs/blob/master/jar/jol-cli-0.9-full.jar)
+2. 可以在Android Studio/Eclipse中使用,也可以直接在cmd命令行下使用
+    1. AS下使用
+        1. 将jol-cli-0.9-full.jar放在工程指定模块的libs文件夹下,然后点击右键"Add as Library"添加依赖即可.
+        2. 在Java代码中使用jar包含的api查看指定类的内存布局
+            ```java
+            System.out.println(VM.current().details());
+            System.out.println(ClassLayout.parseClass(B.class).toPrintable());
+            ```
+    2. cmd命令行下使用
+        1. 将jol-cli-0.9-full.jar放在Java安装路径下的jre\lib\ext文件夹中.如:"C:\Program Files\Java\jdk1.7.0_80\jre\lib\ext"
+        2. 在cmd命令行中直接查看Java内置类.
+            ```
+            java -cp jol-cli-0.9-full.jar org.openjdk.jol.Main internals java.lang.String
+            ```
+#### 7.Jol查看指定类的内存布局实例及字段重排列及缓存行
+**1.代码实例**
+```java
+public class A {
+	long l;
+	int i;
+	private int a,b;
+}
+public class B extends A{
+	long l;
+	int i;
+}
+public class JolTest {
+    public static void main(String[] args) {
+        System.out.println(VM.current().details());
+        System.out.println(ClassLayout.parseClass(A.class).toPrintable());
+        System.out.println(ClassLayout.parseClass(B.class).toPrintable());
+    }
+}
+
+打印结果:
+//运行于64位HotSpot虚拟机
+# Running 64-bit HotSpot VM.
+//使用32位压缩指针
+# Using compressed oop with 3-bit shift.
+# Using compressed klass with 3-bit shift.
+//JVM堆中对象内存起始地址对齐8字节的倍数
+# Objects are 8 bytes aligned.
+# Field sizes by type: 4, 1, 1, 2, 2, 4, 4, 8, 8 [bytes]
+# Array element sizes: 4, 1, 1, 2, 2, 4, 4, 8, 8 [bytes]
+
+jt.A object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+    //对象头占据12个字节,启用压缩指针将对象头大小从16降至12字节
+      0    12        (object header)                           N/A
+    //发生了字段重排列,i放到了l前面.
+    //因为i占用4个字节,偏移量是4字节的倍数,这样可以利用12-16剩下的4个字节空间.
+    //如果l放在第1个,l是long,占用8个字节,只能是16-24.就会浪费12-16这4个字节空间.
+     12     4    int A.i                                       N/A
+     16     8   long A.l                                       N/A
+    //a,b都是int,都占用4个字节,所以没必要重排.
+     24     4    int A.a                                       N/A
+     28     4    int A.b                                       N/A
+Instance size: 32 bytes
+Space losses: 0 bytes internal + 0 bytes external = 0 bytes total
+
+jt.B object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+      0    12        (object header)                           N/A
+    //B会为其父类A中的同名字段及私有字段分配内存空间     
+     12     4    int A.i                                       N/A
+     16     8   long A.l                                       N/A
+     24     4    int A.a                                       N/A
+     28     4    int A.b                                       N/A
+    //这里l和i无需重排列,B.l可以完整使用8个字节的连续数据.没有浪费空间
+     32     8   long B.l                                       N/A
+     40     4    int B.i                                       N/A
+     44     4        (loss due to the next object alignment)
+Instance size: 48 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+```
+**2.缓存行**<br>
