@@ -754,3 +754,15 @@ Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
 ![](https://user-gold-cdn.xitu.io/2018/9/6/165ada3a67cf5591?w=1668&h=540&f=png&s=13687)
 ![](https://user-gold-cdn.xitu.io/2018/9/6/165ada37a2bfdd4e?w=1676&h=532&f=png&s=14177)
 ![](https://user-gold-cdn.xitu.io/2018/9/6/165ada3da32a23da?w=1670&h=578&f=png&s=19612)
+
+#### 5.JVM的堆划分
+![](https://user-gold-cdn.xitu.io/2018/9/10/165c20f53d3c0cf9?w=1526&h=514&f=png&s=21652)
+JVM的堆被划分为新生代和老年代.其中新生代又包括Eden区及from和to两个大小相同的Survivor区.
+<br>
+1. 每次新建对象都会在Eden区划分一块空间进行存储.当Eden区的空间耗尽,就会触发1次MinorGC.
+2. Minor GC就是收集新生代的垃圾并清除.存活下来的对象,则被送入Survivor区.
+    1. Eden区和from区中的存活对象被复制到to中
+    2. 然后交换from和to指针,保证to指向的Survivor区还是空的
+    3. JVM会记录Survivor区中的对象一共被来回复制了几次,如果超过15次(不同虚拟机参数不同),则该存活对象晋升到老年代;另外如果单个Survior区已经被占用了50%(不同虚拟机参数不同),则较高复制次数的对象也会被晋升至老年代.
+3. Minro GC避免了对整个堆进行垃圾回收.理想情况下,Eden区中的对象基本都死亡了,那么需要复制的数据极少性能很高.
+4. JVM的分代垃圾回收基于1个前提:大部分对象只存活一小段时间,小部分对象却存活一大段时间.
