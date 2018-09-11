@@ -766,3 +766,10 @@ JVM的堆被划分为新生代和老年代.其中新生代又包括Eden区及fro
     3. JVM会记录Survivor区中的对象一共被来回复制了几次,如果超过15次(不同虚拟机参数不同),则该存活对象晋升到老年代;另外如果单个Survior区已经被占用了50%(不同虚拟机参数不同),则较高复制次数的对象也会被晋升至老年代.
 3. Minro GC避免了对整个堆进行垃圾回收.理想情况下,Eden区中的对象基本都死亡了,那么需要复制的数据极少性能很高.
 4. JVM的分代垃圾回收基于1个前提:大部分对象只存活一小段时间,小部分对象却存活一大段时间.
+
+## 8.HotSpot虚拟机的intrinsic
+**对于Java API已经存在的功能,即使我们可以实现类似的功能,在class文件层面和Java源码很类似,实际执行效率也有天壤之别.**
+1. Java API中部分方法会被@HotSpotIntrinsicCandidate注解所标注
+2. 在HotSpot虚拟机中,被@HotSpotIntrinsicCandidate注解所标注的方法都是HotSpot intrinsic.<br>
+对于HotSpot intrinsic方法,HotSpot虚拟机额外维护了一套高效的实现,这些高效实现依赖具体的CPU指令.
+3. 所以对于API已有的功能不要自己尝试去实现,即使源码很类似,但在JVM层面完全无法使用HotSpot虚拟机对原生API的高效实现,性能相对是很低的.
